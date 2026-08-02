@@ -1,0 +1,3 @@
+# People and HR
+
+Controlled CompanyOS baseline. Documents are draft until an accountable owner approves them.
