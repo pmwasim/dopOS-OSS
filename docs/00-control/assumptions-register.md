@@ -1,5 +1,5 @@
 ---
-title: Assumptions Register
+title: Assumptions Governance Guidance
 document_id: CO-00-CONTROL-ASSUMPTIONS-REGISTER
 document_type: framework
 status: draft

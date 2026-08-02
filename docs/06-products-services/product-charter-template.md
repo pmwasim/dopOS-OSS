@@ -1,5 +1,5 @@
 ---
-title: Product Charter Template
+title: Product Charter Application Guidance
 document_id: CO-06-PRODUCTS-SERVICES-PRODUCT-CHARTER-TEMPLATE
 document_type: framework
 status: draft

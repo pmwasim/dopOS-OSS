@@ -1,5 +1,5 @@
 ---
-title: Legal Obligations Register
+title: Legal Obligations Governance Guidance
 document_id: CO-14-RISK-COMPLIANCE-LEGAL-LEGAL-OBLIGATIONS-REGISTER
 document_type: framework
 status: draft

@@ -1,5 +1,5 @@
 ---
-title: Department Charter Template
+title: Department Charter Application Guidance
 document_id: CO-03-ORGANIZATION-DEPARTMENT-CHARTER-TEMPLATE
 document_type: framework
 status: draft

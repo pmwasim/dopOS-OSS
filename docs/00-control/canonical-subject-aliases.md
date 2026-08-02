@@ -24,6 +24,4 @@ tags: [companyos, control]
 
 # Canonical Subject Alias Resolution
 
-The validator detects eight duplicate titles. They are intentional references to different controlled purposes: domain guidance versus a reusable template/register, or commercial policy versus external partner delivery. They are not competing authoritative documents while all remain draft. Before approval, the owner must choose one canonical source and replace the other with a link.
-
-Affected subjects: reseller model; country, industry, department, and product charter templates; assumptions; compliance obligations; and legal obligations.
+Resolved on 2026-08-02. The reusable template and register library is canonical. Domain-specific duplicates were renamed as application or governance guidance; the partner reseller model is distinct from the commercial reseller model. The validation gate now requires unique document titles.

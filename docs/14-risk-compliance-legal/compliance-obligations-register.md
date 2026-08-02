@@ -1,5 +1,5 @@
 ---
-title: Compliance Obligations Register
+title: Compliance Obligations Governance Guidance
 document_id: CO-14-RISK-COMPLIANCE-LEGAL-COMPLIANCE-OBLIGATIONS-REGISTER
 document_type: framework
 status: draft

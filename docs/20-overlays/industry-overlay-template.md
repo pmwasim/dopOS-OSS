@@ -1,5 +1,5 @@
 ---
-title: Industry Overlay Template
+title: Industry Overlay Application Guidance
 document_id: CO-20-OVERLAYS-INDUSTRY-OVERLAY-TEMPLATE
 document_type: framework
 status: draft

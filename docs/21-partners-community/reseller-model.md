@@ -1,5 +1,5 @@
 ---
-title: Reseller Model
+title: Partner Reseller Model
 document_id: CO-21-PARTNERS-COMMUNITY-RESELLER-MODEL
 document_type: framework
 status: draft
