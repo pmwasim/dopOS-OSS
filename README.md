@@ -26,8 +26,9 @@ through modular capabilities rather than separate products.
 ## Current phase
 
 Planning and public foundation. No legacy source has been copied into this
-repository. See [the product charter](docs/PRODUCT-CHARTER.md) and
-[implementation plan](docs/IMPLEMENTATION-PLAN.md).
+repository. Start with the [vision](docs/VISION.md), [mission](docs/MISSION.md),
+[PRD](docs/PRD.md), [architecture](docs/ARCHITECTURE.md), and
+[roadmap](docs/ROADMAP.md).
 
 ## Licensing
 
