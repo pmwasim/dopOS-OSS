@@ -88,6 +88,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Safety control", page)
         self.assertIn("Runtime health", page)
         self.assertIn("backups ·", page)
+        self.assertIn("rev ·", page)
         self.assertIn("Local tools", page)
         self.assertIn("available", page)
         self.assertIn("unavailable", page)
