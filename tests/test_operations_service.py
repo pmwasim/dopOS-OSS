@@ -178,7 +178,16 @@ class OperationsServiceTests(unittest.TestCase):
             queue = service.autonomous_work_queue()
             self.assertEqual(queue["count"], 2)
             self.assertEqual([item["title"] for item in queue["items"]], ["First item", "Second item"])
-            self.assertNotIn("Do not expose", str(queue)); service.close()
+            self.assertNotIn("Do not expose", str(queue))
+            item = service.create_work_item("Queue", "Show autonomous queue status and queued work inbox")
+            plan = service.plan_for_request(item["id"])
+            self.assertIn("queue.status", plan["actions"])
+            service.approve_plan(plan["id"])
+            done = service.execute_plan(plan["id"])
+            captured = next(entry["result"] for entry in done["results"] if entry["action"] == "queue.status")
+            self.assertEqual(captured["count"], 2)
+            self.assertNotIn("Do not expose", str(captured))
+            service.close()
 
     def test_backup_restores_auditable_state(self):
         with tempfile.TemporaryDirectory() as directory:
