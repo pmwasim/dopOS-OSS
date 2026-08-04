@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Any
 
 SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ollama.status", "quality.status", "backup.create", "backup.verify"}
+MAX_WORK_ITEM_TITLE = 160
+MAX_WORK_ITEM_REQUEST = 8_000
 
 def synchronized(method):
     def wrapped(self, *args, **kwargs):
@@ -71,9 +73,17 @@ class OperationsService:
 
     @synchronized
     def create_work_item(self, title: str, request: str) -> dict[str, Any]:
-        if not title.strip() or not request.strip(): raise ValueError("title and request are required")
-        now = self.now(); cursor = self.db.execute("INSERT INTO work_items(title,request,state,created_at) VALUES(?,?,?,?)", (title.strip(), request.strip(), "open", now)); self.db.commit()
-        item = {"id": cursor.lastrowid, "title": title.strip(), "request": request.strip(), "state": "open", "created_at": now}; self.audit("work_item.created", item); return item
+        if not isinstance(title, str) or not isinstance(request, str):
+            raise ValueError("title and request must be text")
+        title, request = title.strip(), request.strip()
+        if not title or not request:
+            raise ValueError("title and request are required")
+        if len(title) > MAX_WORK_ITEM_TITLE:
+            raise ValueError(f"title must be at most {MAX_WORK_ITEM_TITLE} characters")
+        if len(request) > MAX_WORK_ITEM_REQUEST:
+            raise ValueError(f"request must be at most {MAX_WORK_ITEM_REQUEST} characters")
+        now = self.now(); cursor = self.db.execute("INSERT INTO work_items(title,request,state,created_at) VALUES(?,?,?,?)", (title, request, "open", now)); self.db.commit()
+        item = {"id": cursor.lastrowid, "title": title, "request": request, "state": "open", "created_at": now}; self.audit("work_item.created", item); return item
 
     @synchronized
     def work_items(self, limit: int = 12) -> list[dict[str, Any]]:

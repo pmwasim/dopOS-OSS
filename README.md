@@ -55,3 +55,7 @@ The core also verifies its chained audit events and supports an explicit local S
 `scripts/autonomous_saas_loop.py` runs the repository's declared inspect, build, test, verification, and packaging gates, preserving timestamped JSON evidence and a Markdown journal. It selects a Markdown work item from `workspace/inbox/` when one is present. Use `--dry-run` to inspect the next cycle without executing it.
 
 The loop is local-first and intentionally does not deploy, publish, access secrets, change production, or make destructive Git changes. GitHub Actions runs the same controls on pushes and pull requests and preserves the generated evidence as a short-lived build artifact.
+
+## Local input boundary
+
+The supplied service unit is loopback-only. Its JSON API accepts only bounded request bodies and bounded text work-item fields; malformed or oversized input is rejected before it reaches the local database or planner. Hosted multi-user authentication and authorization are separate future product work, not implied by this offline baseline.

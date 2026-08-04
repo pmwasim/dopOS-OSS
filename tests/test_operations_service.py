@@ -65,6 +65,14 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(health["records"]["work_items"], 1)
         service.close()
 
+    def test_work_item_input_is_bounded_and_text_only(self):
+        service=OperationsService()
+        with self.assertRaisesRegex(ValueError, "at most 160"): service.create_work_item("x" * 161, "safe request")
+        with self.assertRaisesRegex(ValueError, "at most 8000"): service.create_work_item("Safe", "x" * 8001)
+        with self.assertRaisesRegex(ValueError, "must be text"): service.create_work_item(None, "safe request")
+        self.assertEqual(service.status_summary()["work_items"], 0)
+        service.close()
+
     def test_backup_restores_auditable_state(self):
         with tempfile.TemporaryDirectory() as directory:
             service=OperationsService(); service.create_work_item("Backup", "prove recovery path")

@@ -5,6 +5,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from .service import OperationsService
 from .ui import PAGE
 
+MAX_REQUEST_BODY_BYTES = 64 * 1024
+
 class Handler(BaseHTTPRequestHandler):
     service: OperationsService
     def reply(self, code, payload):
@@ -12,7 +14,18 @@ class Handler(BaseHTTPRequestHandler):
     def reply_text(self, code, payload, content_type="text/plain; charset=utf-8"):
         data=payload.encode(); self.send_response(code); self.send_header("Content-Type", content_type); self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data)
     def body(self):
-        return json.loads(self.rfile.read(int(self.headers.get("Content-Length", "0"))))
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError as exc:
+            raise ValueError("invalid Content-Length") from exc
+        if length <= 0:
+            raise ValueError("request body is required")
+        if length > MAX_REQUEST_BODY_BYTES:
+            raise ValueError("request body exceeds local safety limit")
+        payload = json.loads(self.rfile.read(length))
+        if not isinstance(payload, dict):
+            raise ValueError("request body must be a JSON object")
+        return payload
     def do_GET(self):
         if self.path == "/":
             data=PAGE.encode(); self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data); return
@@ -41,7 +54,7 @@ class Handler(BaseHTTPRequestHandler):
             if self.path.startswith("/plans/") and self.path.endswith("/execute"): return self.reply(200, self.service.execute_plan(int(self.path.split("/")[2])))
             if self.path == "/controls/kill-switch": return self.reply(200, self.service.set_kill_switch(bool(data["enabled"])))
             return self.reply(404, {"error":"not found"})
-        except (KeyError, ValueError, json.JSONDecodeError) as exc: return self.reply(400, {"error":str(exc)})
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc: return self.reply(400, {"error":str(exc)})
     def log_message(self, *_): pass
 
 def make_server(host: str, port: int, database: str):

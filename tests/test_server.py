@@ -1,6 +1,7 @@
 import json, sys, threading, unittest
 from pathlib import Path
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 from dopos_core.server import make_server
 
@@ -20,6 +21,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(health["status"], "ok")
         self.assertTrue(health["audit_chain_valid"])
         self.assertIn("records", health)
+        with self.assertRaises(HTTPError) as too_long:
+            self.request("/work-items", {"title":"x" * 161, "request":"safe request"})
+        self.assertEqual(too_long.exception.code, 400)
         page = urlopen(self.url).read().decode()
         self.assertIn("Ask dopOS anything", page)
         self.assertIn("Live Work", page)
