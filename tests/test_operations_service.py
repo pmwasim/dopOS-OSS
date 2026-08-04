@@ -377,6 +377,14 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_request_router_adds_control_status_for_paused_execution(self):
+        service = OperationsService()
+        item = service.create_work_item("Safety", "Report paused execution state")
+        plan = service.plan_for_request(item["id"])
+        self.assertIn("control.status", plan["actions"])
+        service.close()
+
     def test_request_router_adds_control_status_for_safety_ready(self):
         service = OperationsService()
         item = service.create_work_item("Safety", "Confirm safety ready state")
