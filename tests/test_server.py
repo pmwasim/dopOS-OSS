@@ -133,6 +133,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('Approval required', page)
         self.assertIn('Evidence captured', page)
         self.assertIn('Diary updated', page)
+        self.assertIn('No diary evidence recorded yet.', page)
         self.assertIn("GitHub</span>", page)
         self.assertIn("Local AI</span>", page)
         self.assertIn('<h3>Workspace</h3>', page)
