@@ -346,6 +346,10 @@ class OperationsService:
                 "document_count": workspace.get("count", 0),
                 "folder_count": workspace.get("folder_count", 0),
             },
+            "safety": {
+                "execution_paused": self.kill_switch_enabled(),
+                "kill_switch": self.control_status()["kill_switch"],
+            },
             "queue": {
                 "configured": queue.get("configured", False),
                 "count": queue.get("count", 0),

@@ -56,6 +56,9 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertTrue(today["workspace"]["configured"])
             self.assertEqual(today["workspace"]["document_count"], 0)
             self.assertEqual(today["workspace"]["folder_count"], 0)
+            self.assertIn("safety", today)
+            self.assertFalse(today["safety"]["execution_paused"])
+            self.assertEqual(today["safety"]["kill_switch"], "off")
             service.close()
 
     def test_today_projects_approved_plans_as_ready_to_run(self):
@@ -86,6 +89,18 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertNotIn("secret output", str(today))
             self.assertIn("workspace", today)
             service.close()
+
+    def test_today_safety_line_reflects_kill_switch(self):
+        service = OperationsService()
+        service.set_kill_switch(True)
+        today = service.today()
+        self.assertTrue(today["safety"]["execution_paused"])
+        self.assertEqual(today["safety"]["kill_switch"], "on")
+        service.set_kill_switch(False)
+        today = service.today()
+        self.assertFalse(today["safety"]["execution_paused"])
+        self.assertEqual(today["safety"]["kill_switch"], "off")
+        service.close()
 
     def test_today_workspace_summary_counts_local_documents_and_folders(self):
         with tempfile.TemporaryDirectory() as directory:
