@@ -96,10 +96,15 @@ class OperationsServiceTests(unittest.TestCase):
 
 
     def test_request_router_adds_backup_retention_without_create(self):
-        service=OperationsService(); item=service.create_work_item("Retention route", "Show retention policy status")
-        plan=service.plan_for_request(item["id"])
-        self.assertIn("backup.retention", plan["actions"])
-        self.assertNotIn("backup.create", plan["actions"])
+        service=OperationsService()
+        for title, request in (
+            ("Retention route", "Show retention policy status"),
+            ("Backup retention", "Check backup retention status"),
+        ):
+            item=service.create_work_item(title, request)
+            plan=service.plan_for_request(item["id"])
+            self.assertIn("backup.retention", plan["actions"])
+            self.assertNotIn("backup.create", plan["actions"])
         service.close()
 
     def test_safe_actions_include_loop_queue_and_retention_adapters(self):
