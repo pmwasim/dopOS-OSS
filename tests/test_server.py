@@ -101,6 +101,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('id="request"', page)
         self.assertIn('id="diary"', page)
         self.assertIn('id="today"', page)
+        self.assertIn('id="workspace-results"', page)
         self.assertIn('<strong>Goal</strong>', page)
         self.assertIn('<strong>Plan</strong>', page)
         self.assertIn('<strong>Build</strong>', page)
