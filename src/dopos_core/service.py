@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ci.status", "ollama.status", "quality.status", "backup.create", "backup.verify", "workspace.status", "workspace.snapshot", "loop.status", "queue.status"}
+SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ci.status", "ollama.status", "quality.status", "backup.create", "backup.verify", "backup.retention", "workspace.status", "workspace.snapshot", "loop.status", "queue.status"}
 MAX_WORK_ITEM_TITLE = 160
 MAX_WORK_ITEM_REQUEST = 8_000
 MAX_WORKSPACE_QUERY = 160
@@ -187,6 +187,8 @@ class OperationsService:
             actions.append("queue.status")
         if any(term in request for term in ("recovery", "integrity", "verify backup", "backup health")):
             actions.append("backup.verify")
+        elif any(phrase in request for phrase in ("backup retention", "retention policy", "prune backup", "retention status")):
+            actions.append("backup.retention")
         elif "backup" in request:
             actions.append("backup.create")
         actions.append("diary.preview")
@@ -261,6 +263,7 @@ class OperationsService:
             elif action == "quality.status": results.append({"action": action, "result": self.quality_status()})
             elif action == "backup.create": results.append({"action": action, "result": self.create_backup()})
             elif action == "backup.verify": results.append({"action": action, "result": self.verify_backups()})
+            elif action == "backup.retention": results.append({"action": action, "result": self.backup_retention_status()})
             elif action == "workspace.status": results.append({"action": action, "result": self.workspace_status()})
             elif action == "workspace.snapshot": results.append({"action": action, "result": self.workspace_snapshot()})
             elif action == "loop.status": results.append({"action": action, "result": self.autonomous_loop_status()})

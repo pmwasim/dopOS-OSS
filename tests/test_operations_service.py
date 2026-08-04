@@ -250,6 +250,13 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertIsNone(status["policy"])
         self.assertFalse(status["prune_enabled"])
         self.assertIn("not implemented", status["message"])
+        item=service.create_work_item("Retention", "Show backup retention status and retention policy")
+        plan=service.plan_for_request(item["id"])
+        self.assertIn("backup.retention", plan["actions"])
+        service.approve_plan(plan["id"])
+        done=service.execute_plan(plan["id"])
+        captured=next(entry["result"] for entry in done["results"] if entry["action"] == "backup.retention")
+        self.assertFalse(captured["configured"])
         service.close()
 
     def test_reject_and_kill_switch_block_execution(self):
