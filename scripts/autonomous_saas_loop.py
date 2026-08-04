@@ -1,52 +1,176 @@
 #!/usr/bin/env python3
-"""Controlled local SaaS engineering loop with durable evidence."""
+"""Run a controlled, evidence-producing local SaaS engineering cycle.
+
+The runner is deliberately local-first: it can select queued work, run the
+repository's declared quality gates, and preserve failure evidence.  It does
+not guess deployment commands, mutate infrastructure, commit, push, or publish
+unless a repository owner explicitly enables and configures that capability.
+"""
 from __future__ import annotations
-import argparse, json, subprocess, sys
+
+import argparse
+import json
+import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from time import monotonic
+from typing import Any
+
 
 DEFAULT = ("inspect", "plan", "implement", "build", "test", "verify", "package")
+MAX_OUTPUT = 12_000
 
-def run(command: str, repo: Path) -> dict:
-    result = subprocess.run(command, cwd=repo, shell=True, text=True, capture_output=True)
-    return {"command": command, "returncode": result.returncode, "stdout": result.stdout[-12000:], "stderr": result.stderr[-12000:]}
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def bounded(value: str) -> str:
+    return value[-MAX_OUTPUT:]
+
+
+def command_label(command: Any) -> str:
+    return command if isinstance(command, str) else " ".join(command)
+
+
+def run(command: Any, repo: Path) -> dict[str, Any]:
+    started = monotonic()
+    if isinstance(command, str):
+        result = subprocess.run(command, cwd=repo, shell=True, text=True, capture_output=True)
+    else:
+        result = subprocess.run(command, cwd=repo, text=True, capture_output=True)
+    return {
+        "command": command_label(command),
+        "returncode": result.returncode,
+        "stdout": bounded(result.stdout),
+        "stderr": bounded(result.stderr),
+        "duration_seconds": round(monotonic() - started, 3),
+    }
+
+
+def load_config(repo: Path) -> dict[str, Any]:
+    config_path = repo / ".companyos" / "autonomous-loop.json"
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Cannot load {config_path}: {exc}") from exc
+    if not isinstance(config.get("phases"), dict) or not isinstance(config.get("blocked_capabilities"), list):
+        raise ValueError("Loop config requires phases and blocked_capabilities.")
+    for name, commands in config["phases"].items():
+        if not isinstance(commands, list):
+            raise ValueError(f"Phase {name!r} must be a command list.")
+    if "recover" not in config["phases"]:
+        raise ValueError("Loop config requires a recover phase.")
+    return config
+
+
+def select_work_item(repo: Path, explicit: str | None) -> dict[str, str] | None:
+    if explicit:
+        path = Path(explicit)
+        if not path.is_absolute():
+            path = repo / path
+        if not path.is_file():
+            raise ValueError(f"Work item not found: {path}")
+        return {"path": str(path.relative_to(repo)), "title": path.stem.replace("-", " ")}
+    inbox = repo / "workspace" / "inbox"
+    candidates = sorted(path for path in inbox.glob("*.md") if path.name != ".gitkeep")
+    if not candidates:
+        return None
+    item = candidates[0]
+    for line in item.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.startswith("# "):
+            return {"path": str(item.relative_to(repo)), "title": line[2:].strip()}
+    return {"path": str(item.relative_to(repo)), "title": item.stem.replace("-", " ")}
+
+
+def phase_result(name: str, commands: list[Any], repo: Path) -> dict[str, Any]:
+    entries = [run(command, repo) for command in commands]
+    return {
+        "name": name,
+        "commands": entries,
+        "result": "passed" if all(entry["returncode"] == 0 for entry in entries) else "failed",
+    }
+
+
+def markdown_report(report: dict[str, Any]) -> str:
+    lines = [f"# {report['title']}", "", f"Result: **{report['result']}**", "", f"Started: {report['started_at']}"]
+    if report.get("work_item"):
+        item = report["work_item"]
+        lines += ["", "## Work item", f"- {item['title']} (`{item['path']}`)"]
+    lines += ["", "## Phases"]
+    lines += [f"- {phase['name']}: {phase['result']}" for phase in report["phases"]]
+    if report["result"] == "failed":
+        lines += ["", "## Recovery", "Diagnostics were captured. No reset, deletion, deployment, publication, or external action was performed."]
+    if report["release"] != "not-requested":
+        lines += ["", "## Release", report["release"]]
+    lines += ["", "## Guardrails", "Blocked by default: " + ", ".join(report["blocked_capabilities"]) + "."]
+    return "\n".join(lines) + "\n"
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, default=Path.cwd())
-    parser.add_argument("--title", default="Autonomous SaaS maintenance cycle")
+    parser.add_argument("--title", default="Autonomous SaaS engineering cycle")
+    parser.add_argument("--work-item", help="Markdown work item relative to the repository or absolute path.")
     parser.add_argument("--phases", nargs="*", default=DEFAULT)
     parser.add_argument("--release", action="store_true", help="Run configured release commands only when explicitly enabled.")
-    args = parser.parse_args(); repo = args.repo.resolve()
-    config = json.loads((repo / ".companyos/autonomous-loop.json").read_text())
-    unknown = set(args.phases) - set(config["phases"])
-    if unknown: parser.error(f"unknown phases: {', '.join(sorted(unknown))}")
+    parser.add_argument("--dry-run", action="store_true", help="Validate the selected workflow without running commands.")
+    args = parser.parse_args()
+    repo = args.repo.resolve()
+    try:
+        config = load_config(repo)
+        unknown = set(args.phases) - set(config["phases"])
+        if unknown:
+            raise ValueError(f"Unknown phases: {', '.join(sorted(unknown))}")
+        work_item = select_work_item(repo, args.work_item)
+    except ValueError as exc:
+        parser.error(str(exc))
+
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    output = repo / "workspace/generated/autonomous-loop" / stamp; output.mkdir(parents=True)
-    report = {"title": args.title, "started_at": stamp, "phases": [], "result": "passed", "blocked_capabilities": config["blocked_capabilities"], "release": "not-requested"}
+    output = repo / "workspace" / "generated" / "autonomous-loop" / stamp
+    output.mkdir(parents=True, exist_ok=False)
+    report: dict[str, Any] = {
+        "schema_version": 2,
+        "title": args.title,
+        "started_at": utc_now(),
+        "repository": str(repo),
+        "work_item": work_item,
+        "phases": [],
+        "result": "passed",
+        "blocked_capabilities": config["blocked_capabilities"],
+        "release": "not-requested",
+        "dry_run": args.dry_run,
+    }
     for phase in args.phases:
-        entries = [run(command, repo) for command in config["phases"][phase]]
-        report["phases"].append({"name": phase, "commands": entries})
-        if any(entry["returncode"] for entry in entries):
+        if args.dry_run:
+            result = {"name": phase, "commands": [{"command": command_label(command), "dry_run": True} for command in config["phases"][phase]], "result": "planned"}
+        else:
+            result = phase_result(phase, config["phases"][phase], repo)
+        report["phases"].append(result)
+        if result["result"] == "failed":
             report["result"] = "failed"
-            report["recovery"] = [run(command, repo) for command in config["phases"]["recover"]]
+            report["recovery"] = phase_result("recover", config["phases"]["recover"], repo)
             break
     if report["result"] == "passed" and args.release:
         release = config.get("release", {})
         if not release.get("enabled"):
             report["result"] = "blocked"
             report["release"] = "blocked: release.enabled is false"
+        elif args.dry_run:
+            report["release"] = "planned"
         else:
-            entries = [run(command, repo) for command in release.get("commands", [])]
-            report["phases"].append({"name": "release", "commands": entries})
-            report["release"] = "passed" if all(e["returncode"] == 0 for e in entries) else "failed"
-            if report["release"] == "failed": report["result"] = "failed"
-    (output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-    lines = [f"# {args.title}", "", f"Result: **{report['result']}**", "", "## Phases"]
-    lines += [f"- {p['name']}: " + ("passed" if all(c['returncode'] == 0 for c in p['commands']) else "failed") for p in report["phases"]]
-    if report["result"] == "failed": lines += ["", "## Recovery", "Diagnostics captured; no reset, delete, deployment, or external action was performed."]
-    (output / "journal.md").write_text("\n".join(lines) + "\n")
+            release_result = phase_result("release", release.get("commands", []), repo)
+            report["phases"].append(release_result)
+            report["release"] = release_result["result"]
+            if release_result["result"] == "failed":
+                report["result"] = "failed"
+    report["completed_at"] = utc_now()
+    (output / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    (output / "journal.md").write_text(markdown_report(report), encoding="utf-8")
     print(f"Autonomous loop {report['result']}: {output}")
-    return 0 if report["result"] == "passed" else 1
+    return 0 if report["result"] in {"passed", "planned"} else 1
 
-if __name__ == "__main__": raise SystemExit(main())
+
+if __name__ == "__main__":
+    raise SystemExit(main())

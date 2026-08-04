@@ -3,7 +3,7 @@ title: Autonomous SaaS Engineering Loop
 document_id: CO-12-AUTONOMOUS-SAAS-ENGINEERING-LOOP
 document_type: process
 status: draft
-version: 0.1.0
+version: 0.2.0
 owner_role: [OWNER_ROLE]
 approver_role: [OWNER_DECISION_REQUIRED]
 author: CompanyOS bootstrap
@@ -36,7 +36,9 @@ On any failed build, test, or verification step, the loop enters `recover`: it p
 
 ## Operating model
 
-The repository-controlled `.companyos/autonomous-loop.json` specifies local commands. `scripts/autonomous_saas_loop.py` runs the selected phases, creates timestamped JSON evidence under `workspace/generated/autonomous-loop/`, and writes a concise Markdown journal. An operator or permitted agent can then use the evidence to continue work safely. Empty `plan`, `implement`, `build`, and `package` phases are deliberate: the project owner must supply project-specific commands or an approved agent adapter, rather than having generic documentation run guessed code changes.
+The repository-controlled `.companyos/autonomous-loop.json` specifies local commands. `scripts/autonomous_saas_loop.py` selects the oldest Markdown work item in `workspace/inbox/` (or accepts `--work-item`), runs the selected phases, creates timestamped schema-versioned JSON evidence under `workspace/generated/autonomous-loop/`, and writes a concise Markdown journal. An operator or permitted agent can then use the evidence to continue work safely.
+
+The runner supports `--dry-run` for workflow review without execution. Empty `plan`, `implement`, and `package` phases are deliberate: the project owner must supply project-specific commands or an approved agent adapter, rather than having generic automation guess code changes or production actions.
 
 ## Autonomous work-item rules
 
@@ -45,6 +47,8 @@ An agent may inspect, plan, edit within the declared repository boundary, build,
 ## CI/CD and release boundary
 
 Continuous integration runs the safe phases on every push and pull request. Continuous delivery is not enabled by default. Release commands require all of: an approved change, clean validation evidence, a reviewed release plan, a rollback plan, `release.enabled: true` in the repository-controlled config, and an explicit `--release` invocation. This prevents generic automation from publishing, deploying, or changing production merely because checks passed.
+
+The loop produces delivery-readiness evidence, not an implied deployment. A later environment-specific delivery adapter may be added only after its target, credentials, rollback, health check, and owner are documented.
 
 ## Required controls
 
@@ -60,4 +64,4 @@ Recovery runs configured read-only diagnostics, records failure output and an un
 
 ## Evidence
 
-Every run records commands, exit status, bounded output, execution time, blocked capabilities, and recovery status. Evidence is local by default and must be reviewed before it is used as release evidence.
+Every run records the selected work item, commands, exit status, bounded output, execution time, blocked capabilities, release state, and recovery status. Evidence is local by default and must be reviewed before it is used as release evidence.
