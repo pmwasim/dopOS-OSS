@@ -178,6 +178,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn('queue · ${result.queue && result.queue.configured ? ((result.queue.count || 0)', page)
         self.assertIn("automation ·", page)
         self.assertIn("automation · ${result.automation && result.automation.configured ? (result.automation.latest_result || 'ready') : 'unset'}", page)
+        self.assertIn("Docker status", page)
+        self.assertIn("No Docker details returned.", page)
         self.assertIn("GitHub repository", page)
         self.assertIn("GitHub status unavailable.", page)
         self.assertIn("Private repository", page)
