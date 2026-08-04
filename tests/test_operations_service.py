@@ -665,6 +665,12 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(plan["actions"], ["status.summary", "docker.status", "github.status", "diary.preview"])
         service.close()
 
+
+    def test_quality_status_timeout_message_is_explicit(self):
+        from pathlib import Path
+        source = Path(__file__).resolve().parents[1] / "src" / "dopos_core" / "service.py"
+        self.assertIn("timed out after 90 seconds", source.read_text(encoding="utf-8"))
+
     def test_quality_adapter_uses_only_fixed_local_ci_commands(self):
         service=OperationsService()
         with patch("dopos_core.service.subprocess.run") as run:
