@@ -174,6 +174,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Local AI models", page)
         self.assertIn("No installed models were listed.", page)
         self.assertIn("Local quality checks", page)
+        self.assertIn("Local quality checks are unavailable.", page)
         self.assertIn("backups ·", page)
         self.assertIn("rev ·", page)
         self.assertIn("Local tools", page)
