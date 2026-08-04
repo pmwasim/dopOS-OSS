@@ -150,7 +150,7 @@ def main() -> int:
     except ValueError as exc:
         parser.error(str(exc))
 
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     output = repo / "workspace" / "generated" / "autonomous-loop" / stamp
     output.mkdir(parents=True, exist_ok=False)
     report: dict[str, Any] = {
