@@ -247,7 +247,7 @@ class OperationsService:
     def quality_status(self) -> dict[str, Any]:
         """Run only the repository's fixed local CI gates; no shell interpolation."""
         checks = [
-            ("compile", [sys.executable, "-m", "compileall", "-q", "src"]),
+            ("compile", [sys.executable, "scripts/compile_source.py", "--root", "src"]),
             ("tests", [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]),
             ("governance", [sys.executable, "scripts/validate_companyos.py", "--repo", "."]),
         ]
