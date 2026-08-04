@@ -84,6 +84,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Local workspace directory has not been created yet.", page)
         self.assertIn("api('/today')", page)
         self.assertIn("Stop control enabled", page)
+        self.assertIn("Execution is blocked until it is explicitly resumed.", page)
         self.assertGreaterEqual(page.count("loadToday()"), 3)
         self.assertIn("state.queue", page)
         self.assertIn("no queued work", page)
