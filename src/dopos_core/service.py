@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ollama.status", "quality.status", "backup.create"}
+SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ollama.status", "quality.status", "backup.create", "backup.verify"}
 
 def synchronized(method):
     def wrapped(self, *args, **kwargs):
@@ -159,7 +159,10 @@ class OperationsService:
         if "github" in request or "repository" in request or "repo" in request: actions.append("github.status")
         if "ollama" in request or "model" in request or "ai runtime" in request: actions.append("ollama.status")
         if any(word in request for word in ("test", "build", "ci", "validate", "quality")): actions.append("quality.status")
-        if "backup" in request: actions.append("backup.create")
+        if any(term in request for term in ("recovery", "integrity", "verify backup", "backup health")):
+            actions.append("backup.verify")
+        elif "backup" in request:
+            actions.append("backup.create")
         actions.append("diary.preview")
         explanation = self.local_plan_explanation(row["request"], actions)
         plan=self.propose_plan(work_item_id, actions, explanation)
@@ -230,6 +233,7 @@ class OperationsService:
             elif action == "ollama.status": results.append({"action": action, "result": self.ollama_status()})
             elif action == "quality.status": results.append({"action": action, "result": self.quality_status()})
             elif action == "backup.create": results.append({"action": action, "result": self.create_backup()})
+            elif action == "backup.verify": results.append({"action": action, "result": self.verify_backups()})
             else: raise ValueError("action is not safe")
         self.db.execute("UPDATE plans SET state=? WHERE id=?", ("completed", plan_id))
         self.db.execute("UPDATE work_items SET state=? WHERE id=?", ("completed", row["work_item_id"])); self.db.commit()
@@ -400,3 +404,37 @@ class OperationsService:
             return []
         files = sorted(self.backup_directory.glob("dopos-*.db"), key=lambda path: path.stat().st_mtime, reverse=True)
         return [{"name": path.name, "size": path.stat().st_size, "modified_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()} for path in files[:max(1, min(limit, 100))]]
+
+    @staticmethod
+    def _backup_audit_chain(connection: sqlite3.Connection) -> bool:
+        previous = "GENESIS"
+        try:
+            rows = connection.execute("SELECT kind,payload_json,created_at,previous_hash,event_hash FROM audit_events ORDER BY id")
+            for row in rows:
+                expected = hashlib.sha256(f"{previous}|{row[0]}|{row[2]}|{row[1]}".encode()).hexdigest()
+                if row[3] != previous or row[4] != expected:
+                    return False
+                previous = row[4]
+            return True
+        except sqlite3.DatabaseError:
+            return False
+
+    @synchronized
+    def verify_backups(self, limit: int = 20) -> dict[str, Any]:
+        """Read each local backup without modifying it and prove it is structurally usable."""
+        if not self.backup_directory.is_dir():
+            return {"available": True, "ok": True, "backups": [], "message": "No local backups have been created yet."}
+        files = sorted(self.backup_directory.glob("dopos-*.db"), key=lambda path: path.stat().st_mtime, reverse=True)[:max(1, min(limit, 100))]
+        checks = []
+        for path in files:
+            try:
+                connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+                try:
+                    integrity_ok = connection.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+                    audit_chain_valid = self._backup_audit_chain(connection)
+                finally:
+                    connection.close()
+                checks.append({"name": path.name, "integrity_ok": integrity_ok, "audit_chain_valid": audit_chain_valid, "ok": integrity_ok and audit_chain_valid})
+            except (OSError, sqlite3.DatabaseError) as exc:
+                checks.append({"name": path.name, "integrity_ok": False, "audit_chain_valid": False, "ok": False, "error": self.display_text(str(exc), 300)})
+        return {"available": True, "ok": all(check["ok"] for check in checks), "backups": checks, "message": "No local backups have been created yet." if not checks else "Backup integrity checks completed locally."}

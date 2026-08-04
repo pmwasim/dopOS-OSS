@@ -48,7 +48,7 @@ PYTHONPATH=src python3 -m dopos_core.server --database dopos.db
 
 Its local API exposes `GET /health`, `GET /diary` (raw technical evidence), `GET /journal` (readable operational entries), `GET /journal.md` (offline Markdown export), `POST /work-items`, `POST /plans`, `POST /plans/{id}/approve`, and `POST /plans/{id}/execute`. Requests are deterministically routed only to explicitly allowlisted local actions. Every action is frozen in a plan and requires approval before execution.
 
-The core also verifies its chained audit events and supports an explicit local SQLite backup through `OperationsService.backup_to(...)`. An approved backup request creates a unique database copy in the configured local state directory and records its checksum and audit-chain result. Backup retention, restore, and off-machine storage are not implemented yet.
+The core also verifies its chained audit events and supports an explicit local SQLite backup through `OperationsService.backup_to(...)`. An approved backup request creates a unique database copy in the configured local state directory and records its checksum and audit-chain result. An approved recovery-health request verifies each stored backup's SQLite integrity and audit chain without modifying it. Restore, retention, and off-machine storage are not implemented yet.
 
 ## Autonomous engineering loop
 

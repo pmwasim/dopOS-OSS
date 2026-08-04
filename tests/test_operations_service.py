@@ -76,6 +76,20 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertTrue(Path(backup["path"]).is_file()); self.assertTrue(backup["audit_chain_valid"])
             self.assertEqual(service.backup_inventory()[0]["name"], Path(backup["path"]).name); service.close()
 
+    def test_recovery_health_verifies_backup_integrity_without_restore(self):
+        with tempfile.TemporaryDirectory() as directory:
+            service=OperationsService(); service.backup_directory=Path(directory)
+            service.create_backup()
+            verification=service.verify_backups()
+            self.assertTrue(verification["ok"])
+            self.assertEqual(len(verification["backups"]), 1)
+            self.assertTrue(verification["backups"][0]["integrity_ok"])
+            self.assertTrue(verification["backups"][0]["audit_chain_valid"])
+            item=service.create_work_item("Recovery", "Verify backup health and recovery integrity")
+            plan=service.plan_for_request(item["id"])
+            self.assertIn("backup.verify", plan["actions"])
+            service.close()
+
     def test_reject_and_kill_switch_block_execution(self):
         service=OperationsService(); item=service.create_work_item("Controls", "check stop controls")
         rejected=service.propose_plan(item["id"], ["status.summary"]); self.assertEqual(service.reject_plan(rejected["id"])["state"], "rejected")
