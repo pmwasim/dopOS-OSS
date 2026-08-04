@@ -81,6 +81,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("No work yet.", page)
         self.assertIn("folder</small>", page)
         self.assertIn("Workspace is ready and empty.", page)
+        self.assertIn("Local workspace directory has not been created yet.", page)
         self.assertIn("api('/today')", page)
         self.assertIn("state.queue", page)
         self.assertIn("state.automation", page)
