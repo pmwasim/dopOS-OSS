@@ -100,6 +100,14 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_request_router_adds_docker_for_container_phrase(self):
+        service=OperationsService()
+        item=service.create_work_item("Containers", "Show container status on this host")
+        plan=service.plan_for_request(item["id"])
+        self.assertIn("docker.status", plan["actions"])
+        service.close()
+
     def test_request_router_adds_quality_for_validate_phrase(self):
         service=OperationsService()
         item=service.create_work_item("Validate", "Please validate the local quality gates")
