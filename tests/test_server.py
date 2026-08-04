@@ -33,6 +33,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Ask dopOS anything", page)
         self.assertIn("Live Work", page)
         self.assertIn("Diary", page)
+        self.assertIn("Find a file or folder", page)
+        self.assertIn("searchWorkspace", page)
         tools = self.request("/tools/status")
         self.assertEqual(set(tools), {"docker", "github", "ollama"})
         workspace = self.request("/workspace")
