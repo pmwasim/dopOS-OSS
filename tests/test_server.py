@@ -24,6 +24,7 @@ class ServerTests(unittest.TestCase):
         with self.assertRaises(HTTPError) as too_long:
             self.request("/work-items", {"title":"x" * 161, "request":"safe request"})
         self.assertEqual(too_long.exception.code, 400)
+        too_long.exception.close()
         page = urlopen(self.url).read().decode()
         self.assertIn("Ask dopOS anything", page)
         self.assertIn("Live Work", page)
