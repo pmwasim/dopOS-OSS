@@ -82,6 +82,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("state.automation", page)
         self.assertIn("state.workspace", page)
         self.assertIn("state.safety", page)
+        self.assertIn("Nothing waiting", page)
+        self.assertIn("new work can be planned", page)
         self.assertIn("execution ready", page)
         self.assertIn("execution paused", page)
         self.assertIn("kill switch", page)
