@@ -244,6 +244,19 @@ class OperationsService:
         return {"work_items": self.db.execute("SELECT COUNT(*) FROM work_items").fetchone()[0], "plans": self.db.execute("SELECT COUNT(*) FROM plans").fetchone()[0], "audit_events": self.db.execute("SELECT COUNT(*) FROM audit_events").fetchone()[0]}
 
     @synchronized
+    def health_status(self) -> dict[str, Any]:
+        """Read-only runtime health suitable for a local monitor or service probe."""
+        summary = self.status_summary()
+        audit_chain_valid = self.verify_audit_chain()
+        return {
+            "status": "ok" if audit_chain_valid else "degraded",
+            "core": "dopos",
+            "audit_chain_valid": audit_chain_valid,
+            "execution_paused": self.kill_switch_enabled(),
+            "records": summary,
+        }
+
+    @synchronized
     def tool_status(self) -> dict[str, dict[str, Any]]:
         """Read-only availability snapshot for the local control-room header."""
         return {

@@ -16,7 +16,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/":
             data=PAGE.encode(); self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data); return
-        if self.path == "/health": return self.reply(200, {"status":"ok", "core":"dopos"})
+        if self.path == "/health":
+            health = self.service.health_status()
+            return self.reply(200 if health["status"] == "ok" else 503, health)
         if self.path == "/tools/status": return self.reply(200, self.service.tool_status())
         if self.path == "/controls/kill-switch": return self.reply(200, self.service.control_status())
         if self.path == "/backups": return self.reply(200, self.service.backup_inventory())

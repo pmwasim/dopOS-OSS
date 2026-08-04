@@ -16,6 +16,10 @@ class ServerTests(unittest.TestCase):
         req=Request(self.url+path, data=json.dumps(payload).encode() if payload is not None else None, headers={"Content-Type":"application/json"}, method="POST" if payload is not None else "GET")
         return json.loads(urlopen(req).read())
     def test_local_ui_and_approval_flow(self):
+        health = self.request("/health")
+        self.assertEqual(health["status"], "ok")
+        self.assertTrue(health["audit_chain_valid"])
+        self.assertIn("records", health)
         page = urlopen(self.url).read().decode()
         self.assertIn("Ask dopOS anything", page)
         self.assertIn("Live Work", page)

@@ -56,6 +56,15 @@ class OperationsServiceTests(unittest.TestCase):
         with self.assertRaises(sqlite3.DatabaseError): service.db.execute("DELETE FROM audit_events")
         service.close()
 
+    def test_health_status_reports_ledger_and_execution_safety(self):
+        service=OperationsService(); service.create_work_item("Health", "verify runtime health")
+        health=service.health_status()
+        self.assertEqual(health["status"], "ok")
+        self.assertTrue(health["audit_chain_valid"])
+        self.assertFalse(health["execution_paused"])
+        self.assertEqual(health["records"]["work_items"], 1)
+        service.close()
+
     def test_backup_restores_auditable_state(self):
         with tempfile.TemporaryDirectory() as directory:
             service=OperationsService(); service.create_work_item("Backup", "prove recovery path")
