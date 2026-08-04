@@ -99,6 +99,14 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_request_router_adds_quality_for_validate_phrase(self):
+        service=OperationsService()
+        item=service.create_work_item("Validate", "Please validate the local quality gates")
+        plan=service.plan_for_request(item["id"])
+        self.assertIn("quality.status", plan["actions"])
+        service.close()
+
     def test_request_router_adds_ci_status_for_pipeline_phrase(self):
         service=OperationsService()
         item=service.create_work_item("Pipeline", "Check the pipeline and GitHub Actions status")
