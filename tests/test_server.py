@@ -74,7 +74,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Search stays local and reads names only.", page)
         self.assertIn("searchWorkspace", page)
         self.assertIn("loadWorkspace", page)
-        self.assertGreaterEqual(page.count("loadWorkspace()"), 3)
+        self.assertGreaterEqual(page.count("loadWorkspace()"), 4)
         self.assertIn("Workspace inventory is unavailable.", page)
         self.assertIn("loadDiary()", page)
         self.assertIn("loadRecent", page)
