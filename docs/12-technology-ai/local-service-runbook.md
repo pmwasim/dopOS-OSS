@@ -30,7 +30,7 @@ Operate the dependency-free local core on Ubuntu without exposing it to the netw
 
 ## Installation
 
-Install `deploy/systemd/dopos-oss.service`, reload systemd, enable the service, and verify `http://127.0.0.1:18000/health` from the host. The unit runs as `wasim`, uses a dedicated state path under `~/.local/state/dopos-oss`, binds only to loopback, and restarts on failure.
+Install `deploy/systemd/dopos-oss.service`, reload systemd, enable the service, and verify `http://127.0.0.1:18000/health` from the host. The unit runs as `wasim`, uses the systemd-managed dedicated state path `/var/lib/dopos-oss`, binds only to loopback, and restarts on failure.
 
 ## Recovery
 

@@ -8,15 +8,15 @@ User=wasim
 Group=wasim
 WorkingDirectory=/home/wasim/dopos-oss
 Environment=PYTHONPATH=/home/wasim/dopos-oss/src
-ExecStartPre=/usr/bin/mkdir -p /home/wasim/.local/state/dopos-oss
-ExecStart=/usr/bin/python3 -m dopos_core.server --host 127.0.0.1 --port 18000 --database /home/wasim/.local/state/dopos-oss/dopos.db
+StateDirectory=dopos-oss
+ExecStart=/usr/bin/python3 -m dopos_core.server --host 127.0.0.1 --port 18000 --database /var/lib/dopos-oss/dopos.db
 Restart=on-failure
 RestartSec=3
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/home/wasim/.local/state/dopos-oss
+ReadWritePaths=/var/lib/dopos-oss
 
 [Install]
 WantedBy=multi-user.target
