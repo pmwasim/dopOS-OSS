@@ -52,6 +52,10 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertFalse(today["recovery"]["retention"]["prune_enabled"])
             self.assertIn("queue", today)
             self.assertIn("automation", today)
+            self.assertIn("workspace", today)
+            self.assertTrue(today["workspace"]["configured"])
+            self.assertEqual(today["workspace"]["document_count"], 0)
+            self.assertEqual(today["workspace"]["folder_count"], 0)
             service.close()
 
     def test_today_projects_approved_plans_as_ready_to_run(self):
@@ -80,6 +84,22 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertEqual(today["automation"]["latest_title"], "Cycle A")
             self.assertNotIn("Secret body", str(today))
             self.assertNotIn("secret output", str(today))
+            self.assertIn("workspace", today)
+            service.close()
+
+    def test_today_workspace_summary_counts_local_documents_and_folders(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Notes").mkdir()
+            (root / "Notes" / "idea.md").write_text("private")
+            (root / "readme.txt").write_text("notes")
+            service = OperationsService()
+            service.workspace_directory = root
+            today = service.today()
+            self.assertTrue(today["workspace"]["configured"])
+            self.assertEqual(today["workspace"]["document_count"], 2)
+            self.assertEqual(today["workspace"]["folder_count"], 1)
+            self.assertNotIn("private", str(today["workspace"]))
             service.close()
 
     def test_recent_work_sanitizes_legacy_terminal_control_codes(self):

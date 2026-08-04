@@ -288,7 +288,7 @@ class OperationsService:
         """Read-only runtime health suitable for a local monitor or service probe."""
         summary = self.status_summary()
         audit_chain_valid = self.verify_audit_chain()
-        workspace = self.workspace_status(limit=1)
+        workspace = self.workspace_status(limit=100)
         retention = self.backup_retention_status()
         backup_count = len(self.backup_inventory(limit=100))
         return {
@@ -325,6 +325,7 @@ class OperationsService:
         backups = self.backup_inventory(limit=1)
         queue = self.autonomous_work_queue(limit=1)
         loop = self.autonomous_loop_status(limit=1)
+        workspace = self.workspace_status(limit=100)
         latest = loop["cycles"][0] if loop.get("cycles") else None
         return {
             "generated_at": self.now(),
@@ -336,6 +337,11 @@ class OperationsService:
                 "backup_count": len(self.backup_inventory(limit=100)),
                 "latest_backup": backups[0] if backups else None,
                 "retention": self.backup_retention_status(),
+            },
+            "workspace": {
+                "configured": workspace.get("configured", False),
+                "document_count": workspace.get("count", 0),
+                "folder_count": workspace.get("folder_count", 0),
             },
             "queue": {
                 "configured": queue.get("configured", False),
