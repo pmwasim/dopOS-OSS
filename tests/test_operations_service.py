@@ -228,8 +228,8 @@ class OperationsServiceTests(unittest.TestCase):
 
     def test_safe_actions_include_loop_queue_and_retention_adapters(self):
         from dopos_core.service import SAFE_ACTIONS
-        self.assertGreaterEqual(len(SAFE_ACTIONS), 15)
-        for action in ("loop.status", "queue.status", "backup.retention", "ci.status", "workspace.snapshot", "health.status", "tools.status"):
+        self.assertGreaterEqual(len(SAFE_ACTIONS), 16)
+        for action in ("loop.status", "queue.status", "backup.retention", "ci.status", "workspace.snapshot", "health.status", "tools.status", "control.status"):
             self.assertIn(action, SAFE_ACTIONS)
 
     def test_rejects_unallowlisted_actions(self):
@@ -309,6 +309,30 @@ class OperationsServiceTests(unittest.TestCase):
         for name in ("docker", "github", "ci", "ollama"):
             self.assertIn(name, captured)
             self.assertIn("available", captured[name])
+        service.close()
+
+    def test_request_router_adds_control_status_readonly(self):
+        service = OperationsService()
+        for title, request in (
+            ("Kill switch", "Show kill switch status"),
+            ("Execution safety", "Check execution safety control"),
+            ("Control status", "Report control status"),
+        ):
+            item = service.create_work_item(title, request)
+            plan = service.plan_for_request(item["id"])
+            self.assertIn("control.status", plan["actions"])
+        service.close()
+
+    def test_control_status_action_does_not_toggle_kill_switch(self):
+        service = OperationsService()
+        item = service.create_work_item("Control", "Show kill switch status")
+        plan = service.plan_for_request(item["id"])
+        self.assertIn("control.status", plan["actions"])
+        service.approve_plan(plan["id"])
+        done = service.execute_plan(plan["id"])
+        captured = next(entry["result"] for entry in done["results"] if entry["action"] == "control.status")
+        self.assertEqual(captured["kill_switch"], "off")
+        self.assertEqual(service.control_status()["kill_switch"], "off")
         service.close()
 
     def test_work_item_input_is_bounded_and_text_only(self):

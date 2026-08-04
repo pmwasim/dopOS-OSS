@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ci.status", "ollama.status", "quality.status", "backup.create", "backup.verify", "backup.retention", "workspace.status", "workspace.snapshot", "loop.status", "queue.status", "health.status", "tools.status"}
+SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ci.status", "ollama.status", "quality.status", "backup.create", "backup.verify", "backup.retention", "workspace.status", "workspace.snapshot", "loop.status", "queue.status", "health.status", "tools.status", "control.status"}
 MAX_WORK_ITEM_TITLE = 160
 MAX_WORK_ITEM_REQUEST = 8_000
 MAX_WORKSPACE_QUERY = 160
@@ -189,6 +189,8 @@ class OperationsService:
             actions.append("health.status")
         if any(phrase in request for phrase in ("tool status", "tools status", "local tools", "control room tools", "tools availability")):
             actions.append("tools.status")
+        if any(phrase in request for phrase in ("kill switch status", "execution safety", "safety control", "control status", "execution paused")):
+            actions.append("control.status")
         if any(term in request for term in ("recovery", "integrity", "verify backup", "backup health")):
             actions.append("backup.verify")
         elif any(phrase in request for phrase in ("backup retention", "retention policy", "prune backup", "retention status")):
@@ -274,6 +276,7 @@ class OperationsService:
             elif action == "queue.status": results.append({"action": action, "result": self.autonomous_work_queue()})
             elif action == "health.status": results.append({"action": action, "result": self.health_status()})
             elif action == "tools.status": results.append({"action": action, "result": self.tool_status()})
+            elif action == "control.status": results.append({"action": action, "result": self.control_status()})
             else: raise ValueError("action is not safe")
         self.db.execute("UPDATE plans SET state=? WHERE id=?", ("completed", plan_id))
         self.db.execute("UPDATE work_items SET state=? WHERE id=?", ("completed", row["work_item_id"])); self.db.commit()
