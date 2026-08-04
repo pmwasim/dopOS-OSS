@@ -594,6 +594,20 @@ class OperationsServiceTests(unittest.TestCase):
         result=service.execute_plan(plan["id"])["results"][0]["result"]
         self.assertIn("available", result); service.close()
 
+
+    def test_github_status_reports_missing_executable_reason(self):
+        import shutil
+        service = OperationsService()
+        original = shutil.which
+        try:
+            shutil.which = lambda name: None if name == "gh" else original(name)
+            status = service.github_status()
+            self.assertFalse(status["available"])
+            self.assertIn("GitHub CLI executable not found", status["reason"])
+        finally:
+            shutil.which = original
+        service.close()
+
     def test_github_adapter_is_allowlisted_and_structured(self):
         service=OperationsService(); item=service.create_work_item("GitHub", "read repository metadata")
         plan=service.propose_plan(item["id"], ["github.status"]); service.approve_plan(plan["id"])
