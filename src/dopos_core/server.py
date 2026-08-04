@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse, json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from .service import OperationsService
+from .ui import PAGE
 
 class Handler(BaseHTTPRequestHandler):
     service: OperationsService
@@ -11,6 +12,8 @@ class Handler(BaseHTTPRequestHandler):
     def body(self):
         return json.loads(self.rfile.read(int(self.headers.get("Content-Length", "0"))))
     def do_GET(self):
+        if self.path == "/":
+            data=PAGE.encode(); self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data); return
         if self.path == "/health": return self.reply(200, {"status":"ok", "core":"dopos"})
         if self.path == "/diary": return self.reply(200, self.service.diary())
         return self.reply(404, {"error":"not found"})
@@ -25,7 +28,11 @@ class Handler(BaseHTTPRequestHandler):
         except (KeyError, ValueError, json.JSONDecodeError) as exc: return self.reply(400, {"error":str(exc)})
     def log_message(self, *_): pass
 
+def make_server(host: str, port: int, database: str):
+    Handler.service=OperationsService(database)
+    return ThreadingHTTPServer((host, port), Handler)
+
 def main():
     p=argparse.ArgumentParser(); p.add_argument("--host", default="127.0.0.1"); p.add_argument("--port", type=int, default=8000); p.add_argument("--database", default="dopos.db"); a=p.parse_args()
-    Handler.service=OperationsService(a.database); ThreadingHTTPServer((a.host,a.port), Handler).serve_forever()
+    make_server(a.host, a.port, a.database).serve_forever()
 if __name__ == "__main__": main()
