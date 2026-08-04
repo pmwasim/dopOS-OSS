@@ -18,6 +18,16 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertTrue(preview); self.assertEqual(set(preview[0]), {"id", "kind", "created_at"})
         self.assertGreaterEqual(len(service.diary()), 4); service.close()
 
+    def test_journal_projects_ledger_into_readable_entries_and_markdown(self):
+        service=OperationsService(); item=service.create_work_item("Journal check", "Show the readable journal")
+        plan=service.propose_plan(item["id"], ["status.summary"]); service.approve_plan(plan["id"]); service.execute_plan(plan["id"])
+        entries=service.journal()
+        self.assertTrue(any(entry["summary"] == "Started: Journal check" for entry in entries))
+        self.assertTrue(all(set(entry) == {"id", "kind", "created_at", "summary", "detail"} for entry in entries))
+        export=service.journal_markdown()
+        self.assertIn("# dopOS Journal", export); self.assertIn("Started: Journal check", export); self.assertNotIn("payload", export)
+        service.close()
+
     def test_recent_work_is_durable_and_includes_latest_plan(self):
         service=OperationsService(); item=service.create_work_item("History", "Show Docker status")
         plan=service.plan_for_request(item["id"])

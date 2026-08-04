@@ -9,6 +9,8 @@ class Handler(BaseHTTPRequestHandler):
     service: OperationsService
     def reply(self, code, payload):
         data=json.dumps(payload).encode(); self.send_response(code); self.send_header("Content-Type", "application/json"); self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data)
+    def reply_text(self, code, payload, content_type="text/plain; charset=utf-8"):
+        data=payload.encode(); self.send_response(code); self.send_header("Content-Type", content_type); self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data)
     def body(self):
         return json.loads(self.rfile.read(int(self.headers.get("Content-Length", "0"))))
     def do_GET(self):
@@ -22,6 +24,8 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith("/work-items/"):
             try: return self.reply(200, self.service.work_item(int(self.path.split("/")[2])))
             except (IndexError, ValueError) as exc: return self.reply(404, {"error":str(exc)})
+        if self.path == "/journal.md": return self.reply_text(200, self.service.journal_markdown(), "text/markdown; charset=utf-8")
+        if self.path == "/journal": return self.reply(200, self.service.journal())
         if self.path == "/diary": return self.reply(200, self.service.diary())
         return self.reply(404, {"error":"not found"})
     def do_POST(self):

@@ -310,6 +310,59 @@ class OperationsService:
         ).fetchall()
         return [{"id": row["id"], "kind": row["kind"], "created_at": row["created_at"]} for row in reversed(rows)]
 
+    @classmethod
+    def journal_entry(cls, event: dict[str, Any]) -> dict[str, Any]:
+        """Create a bounded human-readable view without altering audit evidence."""
+        payload = event["payload"]
+        kind = event["kind"]
+        if kind == "work_item.created":
+            summary = f"Started: {cls.display_text(str(payload.get('title', 'new work')), 160)}"
+            detail = cls.display_text(str(payload.get("request", "")), 360)
+        elif kind == "plan.proposed":
+            actions = payload.get("actions", [])
+            summary = f"Prepared a safe plan with {len(actions) if isinstance(actions, list) else 0} action(s)."
+            detail = ", ".join(cls.display_text(str(action), 100) for action in actions[:6]) if isinstance(actions, list) else ""
+        elif kind == "plan.routed":
+            summary = "Selected the local safe action route."
+            detail = cls.display_text(str(payload.get("method", "")), 180)
+        elif kind == "plan.approved":
+            summary = f"Approved plan #{payload.get('id', 'unknown')}."
+            detail = "The allowed checks can now run locally."
+        elif kind == "plan.rejected":
+            summary = f"Rejected plan #{payload.get('id', 'unknown')}."
+            detail = "No action was run."
+        elif kind == "plan.executed":
+            results = payload.get("results", [])
+            summary = f"Completed plan #{payload.get('id', 'unknown')} with {len(results) if isinstance(results, list) else 0} result(s)."
+            detail = "Captured the output of approved local checks."
+        elif kind == "control.kill_switch_changed":
+            paused = payload.get("kill_switch") == "on"
+            summary = "Execution paused." if paused else "Execution resumed."
+            detail = "New plan execution is blocked." if paused else "New approved plans can run."
+        elif kind == "database.backed_up":
+            summary = "Created a verified local recovery backup."
+            detail = "The append-only audit chain was checked before recording the backup."
+        else:
+            summary = cls.display_text(kind.replace("_", " ").replace(".", " · ").capitalize(), 180)
+            detail = "Recorded in the immutable local audit ledger."
+        return {"id": event["id"], "kind": kind, "created_at": event["created_at"], "summary": summary, "detail": detail}
+
+    @synchronized
+    def journal(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Readable projection of the immutable audit ledger for people and the UI."""
+        return [self.journal_entry(event) for event in self.diary(max(1, min(limit, 100)))]
+
+    @synchronized
+    def journal_markdown(self, limit: int = 50) -> str:
+        """Export the bounded local journal without exposing raw audit payloads."""
+        entries = self.journal(limit)
+        lines = ["# dopOS Journal", "", "A local human-readable projection of the append-only audit ledger."]
+        for entry in entries:
+            lines += ["", f"- **{entry['created_at']}** — {entry['summary']}"]
+            if entry["detail"]:
+                lines.append(f"  {entry['detail']}")
+        return "\n".join(lines) + "\n"
+
     @synchronized
     def verify_audit_chain(self) -> bool:
         previous = "GENESIS"

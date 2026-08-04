@@ -31,3 +31,7 @@ class ServerTests(unittest.TestCase):
         detail = self.request(f"/work-items/{item['id']}")
         self.assertEqual(done["state"], "completed"); self.assertEqual(detail["state"], "completed")
         self.assertEqual(detail["plan"]["results"], done["results"]); self.assertGreaterEqual(len(self.request("/diary")), 4)
+        journal = self.request("/journal")
+        self.assertTrue(any("Started: Test" == entry["summary"] for entry in journal))
+        markdown = urlopen(self.url + "/journal.md").read().decode()
+        self.assertIn("# dopOS Journal", markdown)
