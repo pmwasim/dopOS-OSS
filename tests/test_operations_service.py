@@ -122,6 +122,7 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertTrue(today["workspace"]["configured"])
             self.assertEqual(today["workspace"]["document_count"], 2)
             self.assertEqual(today["workspace"]["folder_count"], 1)
+            self.assertTrue(today["workspace"]["catalog_revision"])
             self.assertNotIn("private", str(today["workspace"]))
             service.close()
 

@@ -39,6 +39,7 @@ class ServerTests(unittest.TestCase):
         self.assertTrue(today["workspace"]["configured"])
         self.assertEqual(today["workspace"]["document_count"], 0)
         self.assertEqual(today["workspace"]["folder_count"], 0)
+        self.assertIn("catalog_revision", today["workspace"])
         self.assertIn("safety", today)
         self.assertFalse(today["safety"]["execution_paused"])
         self.assertEqual(today["safety"]["kill_switch"], "off")
