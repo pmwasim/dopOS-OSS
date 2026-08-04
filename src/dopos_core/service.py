@@ -8,11 +8,12 @@ import threading
 import shutil
 import subprocess
 import re
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ollama.status"}
+SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ollama.status", "quality.status"}
 
 def synchronized(method):
     def wrapped(self, *args, **kwargs):
@@ -23,6 +24,7 @@ def synchronized(method):
 class OperationsService:
     def __init__(self, database: str | Path = ":memory:"):
         self._lock = threading.RLock()
+        self.project_root = Path(__file__).resolve().parents[2]
         self.db = sqlite3.connect(database, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript("""
@@ -153,6 +155,7 @@ class OperationsService:
         if "docker" in request or "container" in request: actions.append("docker.status")
         if "github" in request or "repository" in request or "repo" in request: actions.append("github.status")
         if "ollama" in request or "model" in request or "ai runtime" in request: actions.append("ollama.status")
+        if any(word in request for word in ("test", "build", "ci", "validate", "quality")): actions.append("quality.status")
         actions.append("diary.preview")
         explanation = self.local_plan_explanation(row["request"], actions)
         plan=self.propose_plan(work_item_id, actions, explanation)
@@ -221,6 +224,7 @@ class OperationsService:
             elif action == "docker.status": results.append({"action": action, "result": self.docker_status()})
             elif action == "github.status": results.append({"action": action, "result": self.github_status()})
             elif action == "ollama.status": results.append({"action": action, "result": self.ollama_status()})
+            elif action == "quality.status": results.append({"action": action, "result": self.quality_status()})
             else: raise ValueError("action is not safe")
         self.db.execute("UPDATE plans SET state=? WHERE id=?", ("completed", plan_id))
         self.db.execute("UPDATE work_items SET state=? WHERE id=?", ("completed", row["work_item_id"])); self.db.commit()
@@ -238,6 +242,23 @@ class OperationsService:
             "github": self.github_status(),
             "ollama": self.ollama_status(),
         }
+
+    @synchronized
+    def quality_status(self) -> dict[str, Any]:
+        """Run only the repository's fixed local CI gates; no shell interpolation."""
+        checks = [
+            ("compile", [sys.executable, "-m", "compileall", "-q", "src"]),
+            ("tests", [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]),
+            ("governance", [sys.executable, "scripts/validate_companyos.py", "--repo", "."]),
+        ]
+        outcomes = []
+        for name, command in checks:
+            try:
+                result = subprocess.run(command, cwd=self.project_root, text=True, capture_output=True, timeout=90, check=False)
+                outcomes.append({"name": name, "passed": result.returncode == 0, "output": (result.stdout + result.stderr)[-4000:]})
+            except subprocess.TimeoutExpired:
+                outcomes.append({"name": name, "passed": False, "output": "timed out after 90 seconds"})
+        return {"available": True, "ok": all(check["passed"] for check in outcomes), "checks": outcomes}
 
     @synchronized
     def docker_status(self) -> dict[str, Any]:

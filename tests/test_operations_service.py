@@ -83,6 +83,20 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(plan["actions"], ["status.summary", "docker.status", "github.status", "diary.preview"])
         service.close()
 
+    def test_quality_adapter_uses_only_fixed_local_ci_commands(self):
+        service=OperationsService()
+        with patch("dopos_core.service.subprocess.run") as run:
+            run.return_value=type("Result", (), {"returncode":0,"stdout":"passed","stderr":""})()
+            result=service.quality_status()
+        self.assertTrue(result["ok"]); self.assertEqual([check["name"] for check in result["checks"]], ["compile", "tests", "governance"])
+        self.assertEqual(run.call_count, 3); self.assertTrue(all(isinstance(call.args[0], list) for call in run.call_args_list)); service.close()
+
+    def test_request_router_adds_quality_check_without_expanding_allowlist(self):
+        service=OperationsService(); item=service.create_work_item("Quality", "Run CI tests and validate build")
+        with patch.object(service, "local_plan_explanation", return_value="Safe quality plan"):
+            plan=service.plan_for_request(item["id"])
+        self.assertEqual(plan["actions"], ["status.summary", "quality.status", "diary.preview"]); service.close()
+
     def test_ollama_adapter_is_allowlisted_and_routed(self):
         service=OperationsService(); item=service.create_work_item("Models", "Show local Ollama model status")
         plan=service.plan_for_request(item["id"]); self.assertIn("ollama.status", plan["actions"])
