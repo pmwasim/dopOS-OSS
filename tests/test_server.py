@@ -38,6 +38,13 @@ class ServerTests(unittest.TestCase):
         workspace = self.request("/workspace")
         self.assertEqual(workspace["count"], 0)
         self.assertIn("documents", workspace)
+        searched_workspace = self.request("/workspace?query=proposal")
+        self.assertEqual(searched_workspace["query"], "proposal")
+        self.assertEqual(searched_workspace["count"], 0)
+        with self.assertRaises(HTTPError) as workspace_query_too_long:
+            self.request("/workspace?query=" + "x" * 161)
+        self.assertEqual(workspace_query_too_long.exception.code, 400)
+        workspace_query_too_long.exception.close()
         self.assertEqual(self.request("/controls/kill-switch")["kill_switch"], "off")
         self.assertEqual(self.request("/backups"), [])
         item=self.request("/work-items", {"title":"Test","request":"Check Docker status"}); plan=self.request("/plans/from-request", {"work_item_id":item["id"]})

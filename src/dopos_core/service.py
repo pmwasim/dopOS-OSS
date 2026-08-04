@@ -18,6 +18,7 @@ from typing import Any
 SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ollama.status", "quality.status", "backup.create", "backup.verify", "workspace.status"}
 MAX_WORK_ITEM_TITLE = 160
 MAX_WORK_ITEM_REQUEST = 8_000
+MAX_WORKSPACE_QUERY = 160
 
 def synchronized(method):
     def wrapped(self, *args, **kwargs):
@@ -305,11 +306,16 @@ class OperationsService:
         }
 
     @synchronized
-    def workspace_status(self, limit: int = 100) -> dict[str, Any]:
-        """Inventory local workspace files without reading contents or following links."""
+    def workspace_status(self, query: str = "", limit: int = 100) -> dict[str, Any]:
+        """Find workspace files by filename/path without reading contents or links."""
+        if not isinstance(query, str):
+            raise ValueError("workspace query must be text")
+        if len(query) > MAX_WORKSPACE_QUERY:
+            raise ValueError(f"workspace query must be at most {MAX_WORKSPACE_QUERY} characters")
+        needle = query.strip().casefold()
         root = self.workspace_directory
         if not root.is_dir():
-            return {"available": True, "configured": False, "documents": [], "count": 0, "message": "Local workspace directory has not been created yet."}
+            return {"available": True, "configured": False, "query": query, "documents": [], "count": 0, "message": "Local workspace directory has not been created yet."}
         allowed_suffixes = {".md", ".txt", ".pdf", ".docx", ".xlsx", ".pptx", ".ods", ".odt", ".odp"}
         documents = []
         for path in sorted(root.rglob("*")):
@@ -319,10 +325,13 @@ class OperationsService:
                 continue
             try:
                 relative = path.relative_to(root)
+                if needle and needle not in str(relative).casefold():
+                    continue
                 documents.append({"path": str(relative), "extension": path.suffix.lower(), "size": path.stat().st_size, "modified_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()})
             except (OSError, ValueError):
                 continue
-        return {"available": True, "configured": True, "documents": documents, "count": len(documents), "message": "Local workspace inventory completed without reading document contents."}
+        message = "Local workspace search completed without reading document contents." if needle else "Local workspace inventory completed without reading document contents."
+        return {"available": True, "configured": True, "query": query, "documents": documents, "count": len(documents), "message": message}
 
     @synchronized
     def quality_status(self) -> dict[str, Any]:

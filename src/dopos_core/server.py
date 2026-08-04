@@ -2,6 +2,7 @@
 from __future__ import annotations
 import argparse, json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, urlsplit
 from .service import OperationsService
 from .ui import PAGE
 
@@ -34,7 +35,12 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200 if health["status"] == "ok" else 503, health)
         if self.path == "/today": return self.reply(200, self.service.today())
         if self.path == "/tools/status": return self.reply(200, self.service.tool_status())
-        if self.path == "/workspace": return self.reply(200, self.service.workspace_status())
+        if urlsplit(self.path).path == "/workspace":
+            try:
+                query = parse_qs(urlsplit(self.path).query, keep_blank_values=True).get("query", [""])[0]
+                return self.reply(200, self.service.workspace_status(query=query))
+            except ValueError as exc:
+                return self.reply(400, {"error": str(exc)})
         if self.path == "/controls/kill-switch": return self.reply(200, self.service.control_status())
         if self.path == "/backups": return self.reply(200, self.service.backup_inventory())
         if self.path == "/work-items": return self.reply(200, self.service.work_items())
