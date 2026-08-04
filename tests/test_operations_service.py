@@ -104,6 +104,14 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_request_router_starts_with_status_summary(self):
+        service=OperationsService()
+        item=service.create_work_item("Start", "Show Docker and GitHub repository status")
+        plan=service.plan_for_request(item["id"])
+        self.assertEqual(plan["actions"][0], "status.summary")
+        service.close()
+
     def test_request_router_always_appends_diary_preview(self):
         service=OperationsService()
         item=service.create_work_item("Diary", "Show safe operational status")
