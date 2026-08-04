@@ -85,6 +85,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("api('/today')", page)
         self.assertIn("state.queue", page)
         self.assertIn("state.automation", page)
+        self.assertIn("no cycle recorded yet", page)
+        self.assertIn("loop evidence not configured", page)
         self.assertIn("state.workspace", page)
         self.assertIn("state.safety", page)
         self.assertIn("Nothing waiting", page)
