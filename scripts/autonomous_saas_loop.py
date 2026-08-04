@@ -108,6 +108,20 @@ def markdown_report(report: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def repair_brief(report: dict[str, Any]) -> str:
+    """Produce a handoff for a future repair cycle without changing source."""
+    failed = next((phase for phase in report["phases"] if phase["result"] == "failed"), None)
+    commands = failed["commands"] if failed else []
+    summaries = [entry["command"] for entry in commands if entry.get("returncode")]
+    lines = ["# Repair work item", "", "status: draft", "source: autonomous-loop evidence", "", "## Goal"]
+    lines.append(f"Repair the failed {failed['name'] if failed else 'unknown'} phase without bypassing its gate.")
+    lines += ["", "## Evidence", "- `report.json` in this same evidence directory."]
+    if summaries:
+        lines += ["- Failed command(s):"] + [f"  - `{command}`" for command in summaries]
+    lines += ["", "## Constraints", "- Preserve the working tree and audit evidence.", "- Do not reset, delete, deploy, publish, or weaken tests to restore a pass.", "- Re-run the complete autonomous cycle after repair."]
+    return "\n".join(lines) + "\n"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, default=Path.cwd())
@@ -168,6 +182,8 @@ def main() -> int:
     report["completed_at"] = utc_now()
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     (output / "journal.md").write_text(markdown_report(report), encoding="utf-8")
+    if report["result"] == "failed":
+        (output / "repair-work-item.md").write_text(repair_brief(report), encoding="utf-8")
     print(f"Autonomous loop {report['result']}: {output}")
     return 0 if report["result"] in {"passed", "planned"} else 1
 

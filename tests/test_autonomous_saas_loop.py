@@ -14,6 +14,8 @@ class LoopTests(unittest.TestCase):
             root = Path(temp); (root / ".companyos").mkdir(); (root / "workspace/generated").mkdir(parents=True)
             (root / ".companyos/autonomous-loop.json").write_text(json.dumps({"phases":{"inspect":["false"],"plan":[],"implement":[],"build":[],"test":[],"verify":[],"package":[],"recover":["true"]},"blocked_capabilities":[]}))
             self.assertNotEqual(subprocess.run(["python3", str(SCRIPT), "--repo", str(root)]).returncode, 0)
+            repair=next((root / "workspace/generated/autonomous-loop").glob("*/repair-work-item.md"))
+            self.assertIn("Repair the failed inspect phase", repair.read_text())
     def test_release_is_blocked_without_explicit_enablement(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp); (root / ".companyos").mkdir(); (root / "workspace/generated").mkdir(parents=True)

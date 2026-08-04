@@ -60,7 +60,7 @@ The loop produces delivery-readiness evidence, not an implied deployment. A late
 
 ## Recovery
 
-Recovery runs configured read-only diagnostics, records failure output and an unresolved gap, and leaves the repository intact for repair. A successful cycle may be committed through normal Git governance; this runner never commits or pushes on its own.
+Recovery runs configured read-only diagnostics, records failure output and an unresolved gap, and leaves the repository intact for repair. Every failed cycle also writes a draft `repair-work-item.md` beside its report, naming the failed phase and its constraints without changing source or relaxing the gate. A successful cycle may be committed through normal Git governance; this runner never commits or pushes on its own.
 
 ## Evidence
 
