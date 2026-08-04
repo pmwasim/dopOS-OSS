@@ -97,6 +97,15 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_request_router_adds_workspace_snapshot(self):
+        service=OperationsService()
+        item=service.create_work_item("Snapshot route", "Capture workspace snapshot catalog revision")
+        plan=service.plan_for_request(item["id"])
+        self.assertIn("workspace.snapshot", plan["actions"])
+        self.assertIn("workspace.status", plan["actions"])
+        service.close()
+
     def test_request_router_adds_loop_status(self):
         service=OperationsService()
         item=service.create_work_item("Loop route", "Show engineering loop evidence and autonomous loop status")
