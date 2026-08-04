@@ -70,6 +70,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("loadWorkspace", page)
         self.assertIn("Workspace inventory is unavailable.", page)
         self.assertIn("loadDiary()", page)
+        self.assertIn("loadRecent", page)
+        self.assertIn("No work yet.", page)
         self.assertIn("folder</small>", page)
         self.assertIn("Workspace is ready and empty.", page)
         self.assertIn("api('/today')", page)
