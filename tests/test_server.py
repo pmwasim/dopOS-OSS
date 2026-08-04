@@ -79,6 +79,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Runtime health", page)
         self.assertIn("backups ·", page)
         self.assertIn("Local tools", page)
+        self.assertIn("available", page)
+        self.assertIn("unavailable", page)
         self.assertIn("does not change execution", page)
         tools = self.request("/tools/status")
         self.assertEqual(set(tools), {"docker", "github", "ci", "ollama"})
