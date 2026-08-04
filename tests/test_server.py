@@ -175,6 +175,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Runtime health", page)
         self.assertIn("folders ·", page)
         self.assertIn("queue ·", page)
+        self.assertIn('queue · ${result.queue && result.queue.configured ? ((result.queue.count || 0)', page)
         self.assertIn("automation ·", page)
         self.assertIn("GitHub repository", page)
         self.assertIn("Private repository", page)
