@@ -169,6 +169,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("queue ·", page)
         self.assertIn("automation ·", page)
         self.assertIn("GitHub repository", page)
+        self.assertIn("Private repository", page)
+        self.assertIn("Public repository", page)
         self.assertIn("Local AI models", page)
         self.assertIn("Local quality checks", page)
         self.assertIn("backups ·", page)
