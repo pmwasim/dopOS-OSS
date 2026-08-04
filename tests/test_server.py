@@ -84,6 +84,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Local workspace directory has not been created yet.", page)
         self.assertIn("api('/today')", page)
         self.assertIn("state.queue", page)
+        self.assertIn("no queued work", page)
+        self.assertIn("inbox not configured", page)
         self.assertIn("state.automation", page)
         self.assertIn("no cycle recorded yet", page)
         self.assertIn("loop evidence not configured", page)
