@@ -93,10 +93,22 @@ class OperationsService:
                 "state": row["plan_state"], "created_at": row["plan_created_at"],
                 "approved_at": row["approved_at"],
                 "explanation": self.display_text(row["explanation"]),
+                "results": self.plan_results(row["plan_id"]),
             }
         else:
             item["plan"] = None
         return item
+
+    def plan_results(self, plan_id: int) -> list[dict[str, Any]] | None:
+        """Project the immutable execution event into a read-only task detail."""
+        rows = self.db.execute(
+            "SELECT payload_json FROM audit_events WHERE kind='plan.executed' ORDER BY id DESC"
+        ).fetchall()
+        for row in rows:
+            payload = json.loads(row["payload_json"])
+            if payload.get("id") == plan_id:
+                return payload.get("results", [])
+        return None
 
     @synchronized
     def work_item(self, work_item_id: int) -> dict[str, Any]:

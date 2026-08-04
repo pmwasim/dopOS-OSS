@@ -27,4 +27,6 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.request("/work-items")[0]["id"], item["id"])
         self.assertEqual(self.request(f"/work-items/{item['id']}")["plan"]["id"], plan["id"])
         self.request(f"/plans/{plan['id']}/approve", {}); done=self.request(f"/plans/{plan['id']}/execute", {})
-        self.assertEqual(done["state"], "completed"); self.assertGreaterEqual(len(self.request("/diary")), 4)
+        detail = self.request(f"/work-items/{item['id']}")
+        self.assertEqual(done["state"], "completed"); self.assertEqual(detail["state"], "completed")
+        self.assertEqual(detail["plan"]["results"], done["results"]); self.assertGreaterEqual(len(self.request("/diary")), 4)

@@ -13,6 +13,7 @@ class OperationsServiceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "requires approval"): service.execute_plan(plan["id"])
         service.approve_plan(plan["id"]); done=service.execute_plan(plan["id"])
         self.assertEqual(done["state"], "completed"); self.assertEqual(service.work_item(item["id"])["state"], "completed")
+        self.assertEqual(service.work_item(item["id"])["plan"]["results"], done["results"])
         self.assertGreaterEqual(len(service.diary()), 4); service.close()
 
     def test_recent_work_is_durable_and_includes_latest_plan(self):
