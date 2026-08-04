@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ci.status", "ollama.status", "quality.status", "backup.create", "backup.verify", "workspace.status", "workspace.snapshot"}
+SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ci.status", "ollama.status", "quality.status", "backup.create", "backup.verify", "workspace.status", "workspace.snapshot", "loop.status"}
 MAX_WORK_ITEM_TITLE = 160
 MAX_WORK_ITEM_REQUEST = 8_000
 MAX_WORKSPACE_QUERY = 160
@@ -181,6 +181,8 @@ class OperationsService:
             actions.append("workspace.status")
         if any(word in request for word in ("workspace snapshot", "document snapshot", "workspace version", "document version", "catalog revision")):
             actions.append("workspace.snapshot")
+        if any(phrase in request for phrase in ("autonomous loop", "loop status", "engineering loop", "loop evidence")):
+            actions.append("loop.status")
         if any(term in request for term in ("recovery", "integrity", "verify backup", "backup health")):
             actions.append("backup.verify")
         elif "backup" in request:
@@ -259,6 +261,7 @@ class OperationsService:
             elif action == "backup.verify": results.append({"action": action, "result": self.verify_backups()})
             elif action == "workspace.status": results.append({"action": action, "result": self.workspace_status()})
             elif action == "workspace.snapshot": results.append({"action": action, "result": self.workspace_snapshot()})
+            elif action == "loop.status": results.append({"action": action, "result": self.autonomous_loop_status()})
             else: raise ValueError("action is not safe")
         self.db.execute("UPDATE plans SET state=? WHERE id=?", ("completed", plan_id))
         self.db.execute("UPDATE work_items SET state=? WHERE id=?", ("completed", row["work_item_id"])); self.db.commit()

@@ -151,6 +151,14 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertTrue(status["configured"]); self.assertEqual(status["count"], 1)
             self.assertEqual(status["cycles"][0]["result"], "passed")
             self.assertNotIn("commands", status["cycles"][0]); self.assertNotIn("secret output", str(status))
+            item = service.create_work_item("Loop", "Show autonomous loop status and engineering loop evidence")
+            plan = service.plan_for_request(item["id"])
+            self.assertIn("loop.status", plan["actions"])
+            service.approve_plan(plan["id"])
+            done = service.execute_plan(plan["id"])
+            captured = next(entry["result"] for entry in done["results"] if entry["action"] == "loop.status")
+            self.assertEqual(captured["count"], 1)
+            self.assertNotIn("secret output", str(captured))
             service.close()
 
     def test_autonomous_work_queue_exposes_only_ordered_metadata(self):
