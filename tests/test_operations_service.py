@@ -94,6 +94,14 @@ class OperationsServiceTests(unittest.TestCase):
         result=service.work_item(item["id"])["plan"]["results"][0]["result"][0]
         self.assertEqual(result, {"id":1,"kind":"plan.executed","created_at":"now"}); service.close()
 
+
+    def test_request_router_adds_backup_retention_without_create(self):
+        service=OperationsService(); item=service.create_work_item("Retention route", "Show retention policy status")
+        plan=service.plan_for_request(item["id"])
+        self.assertIn("backup.retention", plan["actions"])
+        self.assertNotIn("backup.create", plan["actions"])
+        service.close()
+
     def test_safe_actions_include_loop_queue_and_retention_adapters(self):
         from dopos_core.service import SAFE_ACTIONS
         for action in ("loop.status", "queue.status", "backup.retention", "ci.status", "workspace.snapshot"):
