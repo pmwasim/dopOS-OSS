@@ -97,6 +97,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Docker</span>", page)
         self.assertIn('aria-label="Local tool status"', page)
         self.assertIn('id="clock"', page)
+        self.assertIn('id="thread"', page)
         self.assertIn('<strong>Goal</strong>', page)
         self.assertIn('<strong>Plan</strong>', page)
         self.assertIn('<strong>Build</strong>', page)
