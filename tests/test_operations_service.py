@@ -12,14 +12,16 @@ class OperationsServiceTests(unittest.TestCase):
         plan=service.propose_plan(item["id"], ["status.summary"])
         with self.assertRaisesRegex(ValueError, "requires approval"): service.execute_plan(plan["id"])
         service.approve_plan(plan["id"]); done=service.execute_plan(plan["id"])
-        self.assertEqual(done["state"], "completed"); self.assertGreaterEqual(len(service.diary()), 4); service.close()
+        self.assertEqual(done["state"], "completed"); self.assertEqual(service.work_item(item["id"])["state"], "completed")
+        self.assertGreaterEqual(len(service.diary()), 4); service.close()
 
     def test_recent_work_is_durable_and_includes_latest_plan(self):
         service=OperationsService(); item=service.create_work_item("History", "Show Docker status")
         plan=service.plan_for_request(item["id"])
         recent=service.work_items(); self.assertEqual(recent[0]["id"], item["id"])
         self.assertEqual(recent[0]["plan"]["id"], plan["id"])
-        self.assertEqual(service.work_item(item["id"])["plan"]["state"], "awaiting_approval"); service.close()
+        self.assertEqual(service.work_item(item["id"])["plan"]["state"], "awaiting_approval")
+        self.assertEqual(service.work_item(item["id"])["state"], "awaiting_approval"); service.close()
 
     def test_recent_work_sanitizes_legacy_terminal_control_codes(self):
         service=OperationsService(); item=service.create_work_item("Legacy", "Show Docker status")
@@ -47,8 +49,10 @@ class OperationsServiceTests(unittest.TestCase):
     def test_reject_and_kill_switch_block_execution(self):
         service=OperationsService(); item=service.create_work_item("Controls", "check stop controls")
         rejected=service.propose_plan(item["id"], ["status.summary"]); self.assertEqual(service.reject_plan(rejected["id"])["state"], "rejected")
+        self.assertEqual(service.work_item(item["id"])["state"], "rejected")
         approved=service.propose_plan(item["id"], ["status.summary"]); service.approve_plan(approved["id"]); service.set_kill_switch(True)
         with self.assertRaisesRegex(ValueError, "kill switch"): service.execute_plan(approved["id"])
+        self.assertEqual(service.control_status()["kill_switch"], "on")
         service.close()
 
     def test_docker_adapter_is_allowlisted_and_structured(self):

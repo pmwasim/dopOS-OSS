@@ -111,7 +111,8 @@ class OperationsService:
     def propose_plan(self, work_item_id: int, actions: list[str], explanation: str = "") -> dict[str, Any]:
         if not actions or any(action not in SAFE_ACTIONS for action in actions): raise ValueError("plan contains unsupported action")
         if not self.db.execute("SELECT 1 FROM work_items WHERE id=?", (work_item_id,)).fetchone(): raise ValueError("work item not found")
-        now=self.now(); cursor=self.db.execute("INSERT INTO plans(work_item_id,actions_json,state,created_at,explanation) VALUES(?,?,?,?,?)", (work_item_id, json.dumps(actions), "awaiting_approval", now, explanation[:4000])); self.db.commit()
+        now=self.now(); cursor=self.db.execute("INSERT INTO plans(work_item_id,actions_json,state,created_at,explanation) VALUES(?,?,?,?,?)", (work_item_id, json.dumps(actions), "awaiting_approval", now, explanation[:4000]))
+        self.db.execute("UPDATE work_items SET state=? WHERE id=?", ("awaiting_approval", work_item_id)); self.db.commit()
         plan={"id":cursor.lastrowid,"work_item_id":work_item_id,"actions":actions,"explanation":explanation[:4000],"state":"awaiting_approval","created_at":now}; self.audit("plan.proposed", plan); return plan
 
     @synchronized
@@ -151,15 +152,17 @@ class OperationsService:
         row=self.db.execute("SELECT * FROM plans WHERE id=?", (plan_id,)).fetchone()
         if not row: raise ValueError("plan not found")
         if row["state"] != "awaiting_approval": raise ValueError("plan is not awaiting approval")
-        approved_at=self.now(); self.db.execute("UPDATE plans SET state=?, approved_at=? WHERE id=?", ("approved", approved_at, plan_id)); self.db.commit()
+        approved_at=self.now(); self.db.execute("UPDATE plans SET state=?, approved_at=? WHERE id=?", ("approved", approved_at, plan_id))
+        self.db.execute("UPDATE work_items SET state=? WHERE id=?", ("approved", row["work_item_id"])); self.db.commit()
         result={"id":plan_id,"state":"approved","approved_at":approved_at}; self.audit("plan.approved", result); return result
 
     @synchronized
     def reject_plan(self, plan_id: int) -> dict[str, Any]:
-        row=self.db.execute("SELECT state FROM plans WHERE id=?", (plan_id,)).fetchone()
+        row=self.db.execute("SELECT state,work_item_id FROM plans WHERE id=?", (plan_id,)).fetchone()
         if not row: raise ValueError("plan not found")
         if row["state"] != "awaiting_approval": raise ValueError("plan is not awaiting approval")
-        self.db.execute("UPDATE plans SET state=? WHERE id=?", ("rejected", plan_id)); self.db.commit()
+        self.db.execute("UPDATE plans SET state=? WHERE id=?", ("rejected", plan_id))
+        self.db.execute("UPDATE work_items SET state=? WHERE id=?", ("rejected", row["work_item_id"])); self.db.commit()
         result={"id":plan_id,"state":"rejected"}; self.audit("plan.rejected", result); return result
 
     @synchronized
@@ -170,6 +173,11 @@ class OperationsService:
     @synchronized
     def kill_switch_enabled(self) -> bool:
         return self.db.execute("SELECT value FROM controls WHERE name='kill_switch'").fetchone()[0] == "on"
+
+    @synchronized
+    def control_status(self) -> dict[str, Any]:
+        row = self.db.execute("SELECT value,updated_at FROM controls WHERE name='kill_switch'").fetchone()
+        return {"kill_switch": row["value"], "updated_at": row["updated_at"]}
 
     @synchronized
     def execute_plan(self, plan_id: int) -> dict[str, Any]:
@@ -185,7 +193,8 @@ class OperationsService:
             elif action == "github.status": results.append({"action": action, "result": self.github_status()})
             elif action == "ollama.status": results.append({"action": action, "result": self.ollama_status()})
             else: raise ValueError("action is not safe")
-        self.db.execute("UPDATE plans SET state=? WHERE id=?", ("completed", plan_id)); self.db.commit()
+        self.db.execute("UPDATE plans SET state=? WHERE id=?", ("completed", plan_id))
+        self.db.execute("UPDATE work_items SET state=? WHERE id=?", ("completed", row["work_item_id"])); self.db.commit()
         result={"id":plan_id,"state":"completed","results":results}; self.audit("plan.executed", result); return result
 
     @synchronized
