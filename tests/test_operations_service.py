@@ -165,6 +165,10 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(status["folder_count"], 0)
         self.assertEqual(status["documents"], [])
         self.assertEqual(status["folders"], [])
+        snapshot = service.workspace_snapshot()
+        self.assertEqual(snapshot["document_count"], 0)
+        self.assertEqual(snapshot["folder_count"], 0)
+        self.assertTrue(snapshot["catalog_revision"])
         service.close()
 
     def test_autonomous_loop_status_projects_bounded_evidence_without_command_output(self):
