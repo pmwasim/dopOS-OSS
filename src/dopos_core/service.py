@@ -313,6 +313,7 @@ class OperationsService:
                 "audit_chain_valid": self.verify_audit_chain(),
                 "backup_count": len(self.backup_inventory(limit=100)),
                 "latest_backup": backups[0] if backups else None,
+                "retention": self.backup_retention_status(),
             },
             "queue": {
                 "configured": queue.get("configured", False),
@@ -628,10 +629,20 @@ class OperationsService:
             return False
 
     @synchronized
+    def backup_retention_status(self) -> dict[str, Any]:
+        """Report that local retention remains unset; never prune or delete backups."""
+        return {
+            "configured": False,
+            "policy": None,
+            "prune_enabled": False,
+            "message": "Backup retention is not implemented yet; existing local backups are left untouched.",
+        }
+
+    @synchronized
     def verify_backups(self, limit: int = 20) -> dict[str, Any]:
         """Read each local backup without modifying it and prove it is structurally usable."""
         if not self.backup_directory.is_dir():
-            return {"available": True, "ok": True, "backups": [], "message": "No local backups have been created yet."}
+            return {"available": True, "ok": True, "backups": [], "retention": self.backup_retention_status(), "message": "No local backups have been created yet."}
         files = sorted(self.backup_directory.glob("dopos-*.db"), key=lambda path: path.stat().st_mtime, reverse=True)[:max(1, min(limit, 100))]
         checks = []
         for path in files:
@@ -645,4 +656,4 @@ class OperationsService:
                 checks.append({"name": path.name, "integrity_ok": integrity_ok, "audit_chain_valid": audit_chain_valid, "ok": integrity_ok and audit_chain_valid})
             except (OSError, sqlite3.DatabaseError) as exc:
                 checks.append({"name": path.name, "integrity_ok": False, "audit_chain_valid": False, "ok": False, "error": self.display_text(str(exc), 300)})
-        return {"available": True, "ok": all(check["ok"] for check in checks), "backups": checks, "message": "No local backups have been created yet." if not checks else "Backup integrity checks completed locally."}
+        return {"available": True, "ok": all(check["ok"] for check in checks), "backups": checks, "retention": self.backup_retention_status(), "message": "No local backups have been created yet." if not checks else "Backup integrity checks completed locally."}

@@ -47,6 +47,9 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertEqual(today["needs_decision"][0]["plan_id"], plan["id"])
             self.assertTrue(today["recovery"]["audit_chain_valid"])
             self.assertEqual(today["recovery"]["backup_count"], 1)
+            self.assertFalse(today["recovery"]["retention"]["configured"])
+            self.assertIsNone(today["recovery"]["retention"]["policy"])
+            self.assertFalse(today["recovery"]["retention"]["prune_enabled"])
             self.assertIn("queue", today)
             self.assertIn("automation", today)
             service.close()
@@ -229,10 +232,21 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertEqual(len(verification["backups"]), 1)
             self.assertTrue(verification["backups"][0]["integrity_ok"])
             self.assertTrue(verification["backups"][0]["audit_chain_valid"])
+            self.assertFalse(verification["retention"]["configured"])
+            self.assertFalse(verification["retention"]["prune_enabled"])
             item=service.create_work_item("Recovery", "Verify backup health and recovery integrity")
             plan=service.plan_for_request(item["id"])
             self.assertIn("backup.verify", plan["actions"])
             service.close()
+
+    def test_backup_retention_status_is_explicitly_unset(self):
+        service=OperationsService()
+        status=service.backup_retention_status()
+        self.assertFalse(status["configured"])
+        self.assertIsNone(status["policy"])
+        self.assertFalse(status["prune_enabled"])
+        self.assertIn("not implemented", status["message"])
+        service.close()
 
     def test_reject_and_kill_switch_block_execution(self):
         service=OperationsService(); item=service.create_work_item("Controls", "check stop controls")
