@@ -88,6 +88,9 @@ class OperationsService:
     def _work_item_row(self, row: sqlite3.Row) -> dict[str, Any]:
         item = {key: row[key] for key in ("id", "title", "request", "state", "created_at")}
         if row["plan_id"] is not None:
+            # The newest plan is the source of truth for legacy rows created
+            # before work-item lifecycle state was introduced.
+            item["state"] = row["plan_state"]
             item["plan"] = {
                 "id": row["plan_id"], "actions": json.loads(row["actions_json"]),
                 "state": row["plan_state"], "created_at": row["plan_created_at"],
@@ -107,8 +110,22 @@ class OperationsService:
         for row in rows:
             payload = json.loads(row["payload_json"])
             if payload.get("id") == plan_id:
-                return payload.get("results", [])
+                return self.display_results(payload.get("results", []))
         return None
+
+    @staticmethod
+    def display_results(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Keep historical result projections bounded even if old diary previews nested audit data."""
+        projected = []
+        for entry in results:
+            copied = dict(entry)
+            if copied.get("action") == "diary.preview" and isinstance(copied.get("result"), list):
+                copied["result"] = [
+                    {key: event.get(key) for key in ("id", "kind", "created_at")}
+                    for event in copied["result"] if isinstance(event, dict)
+                ]
+            projected.append(copied)
+        return projected
 
     @synchronized
     def work_item(self, work_item_id: int) -> dict[str, Any]:
@@ -200,7 +217,7 @@ class OperationsService:
         actions=json.loads(row["actions_json"]); results=[]
         for action in actions:
             if action == "status.summary": results.append({"action": action, "result": self.status_summary()})
-            elif action == "diary.preview": results.append({"action": action, "result": self.diary(limit=5)})
+            elif action == "diary.preview": results.append({"action": action, "result": self.diary_preview(limit=5)})
             elif action == "docker.status": results.append({"action": action, "result": self.docker_status()})
             elif action == "github.status": results.append({"action": action, "result": self.github_status()})
             elif action == "ollama.status": results.append({"action": action, "result": self.ollama_status()})
@@ -258,6 +275,14 @@ class OperationsService:
     def diary(self, limit: int = 25) -> list[dict[str, Any]]:
         rows=self.db.execute("SELECT id,kind,payload_json,created_at,event_hash FROM audit_events ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
         return [{"id":r["id"],"kind":r["kind"],"payload":json.loads(r["payload_json"]),"created_at":r["created_at"],"event_hash":r["event_hash"]} for r in reversed(rows)]
+
+    @synchronized
+    def diary_preview(self, limit: int = 5) -> list[dict[str, Any]]:
+        """Compact display-safe diary projection; never nests prior audit payloads."""
+        rows = self.db.execute(
+            "SELECT id,kind,created_at FROM audit_events ORDER BY id DESC LIMIT ?", (limit,)
+        ).fetchall()
+        return [{"id": row["id"], "kind": row["kind"], "created_at": row["created_at"]} for row in reversed(rows)]
 
     @synchronized
     def verify_audit_chain(self) -> bool:

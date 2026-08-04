@@ -9,11 +9,13 @@ from dopos_core import OperationsService
 class OperationsServiceTests(unittest.TestCase):
     def test_approval_gated_safe_execution_and_diary(self):
         service=OperationsService(); item=service.create_work_item("Check host", "Show safe operational status")
-        plan=service.propose_plan(item["id"], ["status.summary"])
+        plan=service.propose_plan(item["id"], ["status.summary", "diary.preview"])
         with self.assertRaisesRegex(ValueError, "requires approval"): service.execute_plan(plan["id"])
         service.approve_plan(plan["id"]); done=service.execute_plan(plan["id"])
         self.assertEqual(done["state"], "completed"); self.assertEqual(service.work_item(item["id"])["state"], "completed")
         self.assertEqual(service.work_item(item["id"])["plan"]["results"], done["results"])
+        preview = next(row["result"] for row in done["results"] if row["action"] == "diary.preview")
+        self.assertTrue(preview); self.assertEqual(set(preview[0]), {"id", "kind", "created_at"})
         self.assertGreaterEqual(len(service.diary()), 4); service.close()
 
     def test_recent_work_is_durable_and_includes_latest_plan(self):
@@ -28,6 +30,13 @@ class OperationsServiceTests(unittest.TestCase):
         service=OperationsService(); item=service.create_work_item("Legacy", "Show Docker status")
         service.propose_plan(item["id"], ["status.summary"], "Thinking...\x1b[1D\x1b[K ...done thinking. Safe explanation")
         self.assertEqual(service.work_item(item["id"])["plan"]["explanation"], "Safe explanation"); service.close()
+
+    def test_historical_result_projection_does_not_return_nested_diary_payloads(self):
+        service=OperationsService(); item=service.create_work_item("Historic", "Show safe status")
+        plan=service.propose_plan(item["id"], ["status.summary"]); service.approve_plan(plan["id"])
+        service.audit("plan.executed", {"id":plan["id"], "results":[{"action":"diary.preview", "result":[{"id":1,"kind":"plan.executed","created_at":"now","payload":{"deep":"data"}}]}]})
+        result=service.work_item(item["id"])["plan"]["results"][0]["result"][0]
+        self.assertEqual(result, {"id":1,"kind":"plan.executed","created_at":"now"}); service.close()
     def test_rejects_unallowlisted_actions(self):
         service=OperationsService(); item=service.create_work_item("Unsafe", "do not run arbitrary command")
         with self.assertRaisesRegex(ValueError, "unsupported"): service.propose_plan(item["id"], ["shell.rm_rf"])
