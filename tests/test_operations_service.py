@@ -588,6 +588,20 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(service.control_status()["kill_switch"], "on")
         service.close()
 
+
+    def test_docker_status_reports_missing_executable_reason(self):
+        import shutil
+        service = OperationsService()
+        original = shutil.which
+        try:
+            shutil.which = lambda name: None if name == "docker" else original(name)
+            status = service.docker_status()
+            self.assertFalse(status["available"])
+            self.assertIn("docker executable not found", status["reason"])
+        finally:
+            shutil.which = original
+        service.close()
+
     def test_docker_adapter_is_allowlisted_and_structured(self):
         service=OperationsService(); item=service.create_work_item("Docker", "read docker status")
         plan=service.propose_plan(item["id"], ["docker.status"]); service.approve_plan(plan["id"])
