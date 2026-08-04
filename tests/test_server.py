@@ -86,6 +86,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('Names and paths only.', page)
         self.assertIn('Autonomous loop', page)
         self.assertIn('Autonomous queue', page)
+        self.assertIn('Local backup created', page)
         self.assertIn('The approved run and its evidence have been recorded.', page)
         self.assertIn("Workspace is ready and empty.", page)
         self.assertIn("Local workspace directory has not been created yet.", page)
