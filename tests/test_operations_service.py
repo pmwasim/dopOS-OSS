@@ -628,6 +628,20 @@ class OperationsServiceTests(unittest.TestCase):
         result=service.execute_plan(plan["id"])["results"][0]["result"]
         self.assertIn("available", result); service.close()
 
+
+    def test_ci_status_reports_missing_executable_reason(self):
+        import shutil
+        service = OperationsService()
+        original = shutil.which
+        try:
+            shutil.which = lambda name: None if name == "gh" else original(name)
+            status = service.ci_status()
+            self.assertFalse(status["available"])
+            self.assertIn("GitHub CLI executable not found", status["reason"])
+        finally:
+            shutil.which = original
+        service.close()
+
     def test_ci_adapter_uses_fixed_bounded_github_actions_command(self):
         service=OperationsService()
         with patch("dopos_core.service.shutil.which", return_value="gh"), patch("dopos_core.service.subprocess.run") as run:
