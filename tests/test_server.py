@@ -16,7 +16,10 @@ class ServerTests(unittest.TestCase):
         req=Request(self.url+path, data=json.dumps(payload).encode() if payload is not None else None, headers={"Content-Type":"application/json"}, method="POST" if payload is not None else "GET")
         return json.loads(urlopen(req).read())
     def test_local_ui_and_approval_flow(self):
-        self.assertIn("local operations", urlopen(self.url).read().decode())
+        page = urlopen(self.url).read().decode()
+        self.assertIn("Ask dopOS anything", page)
+        self.assertIn("Live Work", page)
+        self.assertIn("Diary", page)
         item=self.request("/work-items", {"title":"Test","request":"Check Docker status"}); plan=self.request("/plans/from-request", {"work_item_id":item["id"]})
         self.request(f"/plans/{plan['id']}/approve", {}); done=self.request(f"/plans/{plan['id']}/execute", {})
         self.assertEqual(done["state"], "completed"); self.assertGreaterEqual(len(self.request("/diary")), 4)

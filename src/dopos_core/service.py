@@ -94,7 +94,9 @@ class OperationsService:
                   "Do not suggest extra tools, commands, actions, permissions, or approvals. "
                   f"Request: {request[:1000]}\nFrozen actions: {', '.join(actions)}")
         try:
-            result=subprocess.run([executable, "run", "--hidethinking", "--think=false", "--nowordwrap", "qwen3:latest", prompt], text=True, capture_output=True, timeout=90, check=False)
+            # An explanation enriches a plan but must never delay the safe,
+            # deterministic planning path.  The local model is best-effort.
+            result=subprocess.run([executable, "run", "--hidethinking", "--think=false", "--nowordwrap", "qwen3:latest", prompt], text=True, capture_output=True, timeout=8, check=False)
         except subprocess.TimeoutExpired: return fallback
         text=re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", result.stdout).strip()
         text=" ".join(text.split())
