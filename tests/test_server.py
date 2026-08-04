@@ -88,6 +88,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("folder</small>", page)
         self.assertIn(' bytes</small>', page)
         self.assertIn('Host records', page)
+        self.assertEqual(page.count('Host records'), 1)
         self.assertIn('Workspace inventory', page)
         self.assertIn('Names and paths only.', page)
         self.assertIn('Workspace snapshot', page)
