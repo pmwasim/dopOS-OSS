@@ -74,6 +74,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("state.automation", page)
         self.assertIn("state.workspace", page)
         self.assertIn("state.safety", page)
+        self.assertIn("Safety control", page)
+        self.assertIn("does not change execution", page)
         tools = self.request("/tools/status")
         self.assertEqual(set(tools), {"docker", "github", "ci", "ollama"})
         workspace = self.request("/workspace")
