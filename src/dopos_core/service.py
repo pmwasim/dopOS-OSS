@@ -189,7 +189,7 @@ class OperationsService:
             actions.append("health.status")
         if any(phrase in request for phrase in ("tool status", "tools status", "local tools", "control room tools", "tools availability")):
             actions.append("tools.status")
-        if any(phrase in request for phrase in ("kill switch status", "execution safety", "safety control", "control status", "execution paused")):
+        if any(phrase in request for phrase in ("kill switch status", "kill switch", "execution safety", "safety control", "control status", "execution paused")):
             actions.append("control.status")
         if any(term in request for term in ("recovery", "integrity", "verify backup", "backup health")):
             actions.append("backup.verify")
