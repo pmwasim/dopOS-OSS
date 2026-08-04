@@ -33,6 +33,8 @@ class OperationsService:
         CREATE TRIGGER IF NOT EXISTS audit_events_no_update BEFORE UPDATE ON audit_events BEGIN SELECT RAISE(ABORT, 'audit events are append-only'); END;
         CREATE TRIGGER IF NOT EXISTS audit_events_no_delete BEFORE DELETE ON audit_events BEGIN SELECT RAISE(ABORT, 'audit events are append-only'); END;
         """)
+        if "explanation" not in {row[1] for row in self.db.execute("PRAGMA table_info(plans)")}:
+            self.db.execute("ALTER TABLE plans ADD COLUMN explanation TEXT NOT NULL DEFAULT ''")
         if not self.db.execute("SELECT 1 FROM controls WHERE name='kill_switch'").fetchone():
             self.db.execute("INSERT INTO controls(name,value,updated_at) VALUES(?,?,?)", ("kill_switch", "off", self.now())); self.db.commit()
 
@@ -60,11 +62,11 @@ class OperationsService:
         item = {"id": cursor.lastrowid, "title": title.strip(), "request": request.strip(), "state": "open", "created_at": now}; self.audit("work_item.created", item); return item
 
     @synchronized
-    def propose_plan(self, work_item_id: int, actions: list[str]) -> dict[str, Any]:
+    def propose_plan(self, work_item_id: int, actions: list[str], explanation: str = "") -> dict[str, Any]:
         if not actions or any(action not in SAFE_ACTIONS for action in actions): raise ValueError("plan contains unsupported action")
         if not self.db.execute("SELECT 1 FROM work_items WHERE id=?", (work_item_id,)).fetchone(): raise ValueError("work item not found")
-        now=self.now(); cursor=self.db.execute("INSERT INTO plans(work_item_id,actions_json,state,created_at) VALUES(?,?,?,?)", (work_item_id, json.dumps(actions), "awaiting_approval", now)); self.db.commit()
-        plan={"id":cursor.lastrowid,"work_item_id":work_item_id,"actions":actions,"state":"awaiting_approval","created_at":now}; self.audit("plan.proposed", plan); return plan
+        now=self.now(); cursor=self.db.execute("INSERT INTO plans(work_item_id,actions_json,state,created_at,explanation) VALUES(?,?,?,?,?)", (work_item_id, json.dumps(actions), "awaiting_approval", now, explanation[:4000])); self.db.commit()
+        plan={"id":cursor.lastrowid,"work_item_id":work_item_id,"actions":actions,"explanation":explanation[:4000],"state":"awaiting_approval","created_at":now}; self.audit("plan.proposed", plan); return plan
 
     @synchronized
     def plan_for_request(self, work_item_id: int) -> dict[str, Any]:
@@ -76,9 +78,25 @@ class OperationsService:
         if "github" in request or "repository" in request or "repo" in request: actions.append("github.status")
         if "ollama" in request or "model" in request or "ai runtime" in request: actions.append("ollama.status")
         actions.append("diary.preview")
-        plan=self.propose_plan(work_item_id, actions)
-        self.audit("plan.routed", {"plan_id":plan["id"],"method":"deterministic-safe-router","actions":actions})
+        explanation = self.local_plan_explanation(row["request"], actions)
+        plan=self.propose_plan(work_item_id, actions, explanation)
+        self.audit("plan.routed", {"plan_id":plan["id"],"method":"deterministic-safe-router","actions":actions, "explanation_source":"local-qwen-or-fallback"})
         return plan
+
+    @synchronized
+    def local_plan_explanation(self, request: str, actions: list[str]) -> str:
+        """Optional local explanation; selected actions remain deterministic and frozen."""
+        fallback = "Safe plan prepared from the request. It contains only allowlisted read-only checks and still requires approval."
+        executable = shutil.which("ollama")
+        if not executable: return fallback
+        prompt = ("Explain this already-frozen safe operations plan in at most two short sentences. "
+                  "Do not suggest extra tools, commands, actions, permissions, or approvals. "
+                  f"Request: {request[:1000]}\nFrozen actions: {', '.join(actions)}")
+        try:
+            result=subprocess.run([executable, "run", "qwen3:latest", prompt], text=True, capture_output=True, timeout=90, check=False)
+        except subprocess.TimeoutExpired: return fallback
+        text=result.stdout.strip()
+        return text[:4000] if result.returncode == 0 and text else fallback
 
     @synchronized
     def approve_plan(self, plan_id: int) -> dict[str, Any]:
