@@ -5,11 +5,13 @@ import hashlib
 import json
 import sqlite3
 import threading
+import shutil
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SAFE_ACTIONS = {"status.summary", "diary.preview"}
+SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status"}
 
 def synchronized(method):
     def wrapped(self, *args, **kwargs):
@@ -99,6 +101,7 @@ class OperationsService:
         for action in actions:
             if action == "status.summary": results.append({"action": action, "result": self.status_summary()})
             elif action == "diary.preview": results.append({"action": action, "result": self.diary(limit=5)})
+            elif action == "docker.status": results.append({"action": action, "result": self.docker_status()})
             else: raise ValueError("action is not safe")
         self.db.execute("UPDATE plans SET state=? WHERE id=?", ("completed", plan_id)); self.db.commit()
         result={"id":plan_id,"state":"completed","results":results}; self.audit("plan.executed", result); return result
@@ -106,6 +109,16 @@ class OperationsService:
     @synchronized
     def status_summary(self) -> dict[str, int]:
         return {"work_items": self.db.execute("SELECT COUNT(*) FROM work_items").fetchone()[0], "plans": self.db.execute("SELECT COUNT(*) FROM plans").fetchone()[0], "audit_events": self.db.execute("SELECT COUNT(*) FROM audit_events").fetchone()[0]}
+
+    @synchronized
+    def docker_status(self) -> dict[str, Any]:
+        """Read-only adapter; never interpolates user input into a command."""
+        executable = shutil.which("docker")
+        if not executable: return {"available": False, "reason": "docker executable not found"}
+        try:
+            result = subprocess.run([executable, "ps", "--format", "{{.Names}}\t{{.Status}}"], text=True, capture_output=True, timeout=10, check=False)
+        except subprocess.TimeoutExpired: return {"available": True, "ok": False, "reason": "docker status timed out"}
+        return {"available": True, "ok": result.returncode == 0, "containers": result.stdout[:12000], "error": result.stderr[:2000]}
 
     @synchronized
     def diary(self, limit: int = 25) -> list[dict[str, Any]]:
