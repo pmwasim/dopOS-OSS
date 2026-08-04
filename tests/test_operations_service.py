@@ -93,6 +93,12 @@ class OperationsServiceTests(unittest.TestCase):
         service.audit("plan.executed", {"id":plan["id"], "results":[{"action":"diary.preview", "result":[{"id":1,"kind":"plan.executed","created_at":"now","payload":{"deep":"data"}}]}]})
         result=service.work_item(item["id"])["plan"]["results"][0]["result"][0]
         self.assertEqual(result, {"id":1,"kind":"plan.executed","created_at":"now"}); service.close()
+
+    def test_safe_actions_include_loop_queue_and_retention_adapters(self):
+        from dopos_core.service import SAFE_ACTIONS
+        for action in ("loop.status", "queue.status", "backup.retention", "ci.status", "workspace.snapshot"):
+            self.assertIn(action, SAFE_ACTIONS)
+
     def test_rejects_unallowlisted_actions(self):
         service=OperationsService(); item=service.create_work_item("Unsafe", "do not run arbitrary command")
         with self.assertRaisesRegex(ValueError, "unsupported"): service.propose_plan(item["id"], ["shell.rm_rf"])
