@@ -250,7 +250,11 @@ class OperationsService:
     @synchronized
     def control_status(self) -> dict[str, Any]:
         row = self.db.execute("SELECT value,updated_at FROM controls WHERE name='kill_switch'").fetchone()
-        return {"kill_switch": row["value"], "updated_at": row["updated_at"]}
+        return {
+            "kill_switch": row["value"],
+            "execution_paused": row["value"] == "on",
+            "updated_at": row["updated_at"],
+        }
 
     @synchronized
     def execute_plan(self, plan_id: int) -> dict[str, Any]:

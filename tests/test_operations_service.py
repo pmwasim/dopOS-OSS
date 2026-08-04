@@ -363,7 +363,10 @@ class OperationsServiceTests(unittest.TestCase):
         done = service.execute_plan(plan["id"])
         captured = next(entry["result"] for entry in done["results"] if entry["action"] == "control.status")
         self.assertEqual(captured["kill_switch"], "off")
+        self.assertFalse(captured["execution_paused"])
+        self.assertIn("updated_at", captured)
         self.assertEqual(service.control_status()["kill_switch"], "off")
+        self.assertFalse(service.control_status()["execution_paused"])
         service.close()
 
     def test_work_item_input_is_bounded_and_text_only(self):

@@ -161,6 +161,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("execution paused", page)
         self.assertIn("kill switch", page)
         self.assertIn("Safety control", page)
+        self.assertIn("· execution ready", page)
+        self.assertIn("Updated ", page)
         self.assertIn("Runtime health", page)
         self.assertIn("queue ·", page)
         self.assertIn("automation ·", page)
