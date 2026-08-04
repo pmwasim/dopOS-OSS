@@ -56,4 +56,10 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(plan["actions"], ["status.summary", "docker.status", "github.status", "diary.preview"])
         service.close()
 
+    def test_ollama_adapter_is_allowlisted_and_routed(self):
+        service=OperationsService(); item=service.create_work_item("Models", "Show local Ollama model status")
+        plan=service.plan_for_request(item["id"]); self.assertIn("ollama.status", plan["actions"])
+        service.approve_plan(plan["id"]); result=service.execute_plan(plan["id"])["results"]
+        self.assertTrue(any(entry["action"] == "ollama.status" and "available" in entry["result"] for entry in result)); service.close()
+
 import sqlite3

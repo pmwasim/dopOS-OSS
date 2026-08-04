@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status"}
+SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ollama.status"}
 
 def synchronized(method):
     def wrapped(self, *args, **kwargs):
@@ -74,6 +74,7 @@ class OperationsService:
         request = row["request"].lower(); actions=["status.summary"]
         if "docker" in request or "container" in request: actions.append("docker.status")
         if "github" in request or "repository" in request or "repo" in request: actions.append("github.status")
+        if "ollama" in request or "model" in request or "ai runtime" in request: actions.append("ollama.status")
         actions.append("diary.preview")
         plan=self.propose_plan(work_item_id, actions)
         self.audit("plan.routed", {"plan_id":plan["id"],"method":"deterministic-safe-router","actions":actions})
@@ -116,6 +117,7 @@ class OperationsService:
             elif action == "diary.preview": results.append({"action": action, "result": self.diary(limit=5)})
             elif action == "docker.status": results.append({"action": action, "result": self.docker_status()})
             elif action == "github.status": results.append({"action": action, "result": self.github_status()})
+            elif action == "ollama.status": results.append({"action": action, "result": self.ollama_status()})
             else: raise ValueError("action is not safe")
         self.db.execute("UPDATE plans SET state=? WHERE id=?", ("completed", plan_id)); self.db.commit()
         result={"id":plan_id,"state":"completed","results":results}; self.audit("plan.executed", result); return result
@@ -145,6 +147,16 @@ class OperationsService:
         if result.returncode != 0: return {"available": True, "ok": False, "error": result.stderr[:2000]}
         try: return {"available": True, "ok": True, "repository": json.loads(result.stdout)}
         except json.JSONDecodeError: return {"available": True, "ok": False, "error": "GitHub CLI returned invalid JSON"}
+
+    @synchronized
+    def ollama_status(self) -> dict[str, Any]:
+        """Read-only inventory of locally available models."""
+        executable = shutil.which("ollama")
+        if not executable: return {"available": False, "reason": "ollama executable not found"}
+        try:
+            result = subprocess.run([executable, "list"], text=True, capture_output=True, timeout=10, check=False)
+        except subprocess.TimeoutExpired: return {"available": True, "ok": False, "reason": "Ollama status timed out"}
+        return {"available": True, "ok": result.returncode == 0, "models": result.stdout[:12000], "error": result.stderr[:2000]}
 
     @synchronized
     def diary(self, limit: int = 25) -> list[dict[str, Any]]:
