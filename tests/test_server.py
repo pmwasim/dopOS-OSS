@@ -91,6 +91,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('Approve</button>', page)
         self.assertIn('＋', page)
         self.assertIn('Find</button>', page)
+        self.assertIn('Export Markdown</a>', page)
         self.assertIn('Reject</button>', page)
         self.assertIn('Stop</button>', page)
         self.assertIn('This plan is frozen. It contains only local, read-only checks.', page)
