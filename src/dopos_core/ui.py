@@ -48,6 +48,10 @@ PAGE = r'''<!doctype html>
     .pulse { color:#8a5dff; font-size:29px; }
     .side-section { padding-top:25px; }
     .side-section h3 { margin:0 0 17px; font-size:18px; }
+    .side-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:17px; }
+    .side-head h3 { margin:0; }
+    .side-link { color:#9fb7ff; font-size:13px; text-decoration:none; }
+    .side-link:hover { text-decoration:underline; text-underline-offset:3px; }
     .today-line { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid #1d2c4a; color:#dfe8fd; font-size:14px; }
     .today-line:last-child { border-bottom:0; }
     .today-line strong { font-weight:650; }
@@ -96,7 +100,7 @@ PAGE = r'''<!doctype html>
         <div class="side-section"><h3>Workspace</h3><form class="workspace-search" onsubmit="searchWorkspace(event)"><input id="workspace-query" aria-label="Search workspace filenames and folders" maxlength="160" placeholder="Find a file or folder"><button class="button" type="submit">Find</button></form><div id="workspace-results" class="empty">Search stays local and reads names only.</div></div>
         <div class="steps"><div class="step active"><strong>Goal</strong><small>Waiting for your request</small></div><div class="step"><strong>Plan</strong><small>Safe actions only</small></div><div class="step"><strong>Build</strong><small>Approval required</small></div><div class="step"><strong>Test</strong><small>Evidence captured</small></div><div class="step"><strong>Verify</strong><small>Diary updated</small></div></div>
         <div class="side-section"><h3>Recent work</h3><div id="recent" class="empty">No work yet.</div></div>
-        <div class="side-section"><h3>Diary</h3><div id="diary" class="empty">No activity yet.</div></div>
+        <div class="side-section"><div class="side-head"><h3>Diary</h3><a class="side-link" href="/journal.md" download="dopos-journal.md">Export Markdown</a></div><div id="diary" class="empty">No activity yet.</div></div>
       </aside>
     </main>
   </div>

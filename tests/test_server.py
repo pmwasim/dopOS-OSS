@@ -44,6 +44,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Ask dopOS anything", page)
         self.assertIn("Live Work", page)
         self.assertIn("Diary", page)
+        self.assertIn("/journal.md", page)
+        self.assertIn("Export Markdown", page)
         self.assertIn("Find a file or folder", page)
         self.assertIn("searchWorkspace", page)
         self.assertIn("api('/today')", page)
