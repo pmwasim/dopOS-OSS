@@ -33,6 +33,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("next_title", health["queue"])
         self.assertIn("configured", health["automation"])
         self.assertIn("latest_result", health["automation"])
+        self.assertIn("latest_title", health["automation"])
         today = self.request("/today")
         self.assertEqual(today["needs_decision"], [])
         self.assertTrue(today["recovery"]["audit_chain_valid"])

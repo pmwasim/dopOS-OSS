@@ -326,6 +326,7 @@ class OperationsService:
             "automation": {
                 "configured": loop.get("configured", False),
                 "latest_result": latest.get("result") if latest else None,
+                "latest_title": latest.get("title") if latest else None,
             },
         }
 

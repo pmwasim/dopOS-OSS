@@ -284,6 +284,8 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertIsNone(health["queue"]["next_title"])
         self.assertIn("configured", health["automation"])
         self.assertIn("latest_result", health["automation"])
+        self.assertIn("latest_title", health["automation"])
+        self.assertIsNone(health["automation"]["latest_title"])
         service.close()
 
     def test_request_router_adds_health_status_without_backup_create(self):
