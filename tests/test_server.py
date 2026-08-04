@@ -52,6 +52,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("/journal.md", page)
         self.assertIn("Export Markdown", page)
         self.assertIn("tool-ci", page)
+        self.assertIn("Available locally", page)
         self.assertIn("Export still downloads the current journal projection.", page)
         self.assertIn("Find a file or folder", page)
         self.assertIn("searchWorkspace", page)
