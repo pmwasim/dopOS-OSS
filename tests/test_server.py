@@ -93,6 +93,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('Find</button>', page)
         self.assertIn('Export Markdown</a>', page)
         self.assertIn('<h3>Today</h3>', page)
+        self.assertIn('class="brand">dopOS</div>', page)
         self.assertIn('<h3>Workspace</h3>', page)
         self.assertIn('<h3>Recent work</h3>', page)
         self.assertIn('<h3>Diary</h3>', page)
