@@ -149,6 +149,17 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertEqual(captured["catalog_revision"], snapshot["catalog_revision"])
             service.close()
 
+    def test_default_documents_scaffold_is_configured_without_contents(self):
+        service = OperationsService()
+        status = service.workspace_status()
+        self.assertTrue(status["available"])
+        self.assertTrue(status["configured"])
+        self.assertEqual(status["count"], 0)
+        self.assertEqual(status["folder_count"], 0)
+        self.assertEqual(status["documents"], [])
+        self.assertEqual(status["folders"], [])
+        service.close()
+
     def test_autonomous_loop_status_projects_bounded_evidence_without_command_output(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory); run = root / "20260804T220000Z"; run.mkdir()
