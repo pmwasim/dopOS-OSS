@@ -172,6 +172,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("· execution ready", page)
         self.assertIn("Updated ", page)
         self.assertIn("Runtime health", page)
+        self.assertIn("folders ·", page)
         self.assertIn("queue ·", page)
         self.assertIn("automation ·", page)
         self.assertIn("GitHub repository", page)
