@@ -90,3 +90,26 @@ class OperationsService:
     def diary(self, limit: int = 25) -> list[dict[str, Any]]:
         rows=self.db.execute("SELECT id,kind,payload_json,created_at,event_hash FROM audit_events ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
         return [{"id":r["id"],"kind":r["kind"],"payload":json.loads(r["payload_json"]),"created_at":r["created_at"],"event_hash":r["event_hash"]} for r in reversed(rows)]
+
+    @synchronized
+    def verify_audit_chain(self) -> bool:
+        previous = "GENESIS"
+        for row in self.db.execute("SELECT kind,payload_json,created_at,previous_hash,event_hash FROM audit_events ORDER BY id"):
+            expected = hashlib.sha256(f"{previous}|{row['kind']}|{row['created_at']}|{row['payload_json']}".encode()).hexdigest()
+            if row["previous_hash"] != previous or row["event_hash"] != expected:
+                return False
+            previous = row["event_hash"]
+        return True
+
+    @synchronized
+    def backup_to(self, destination: str | Path) -> dict[str, Any]:
+        destination = Path(destination)
+        if destination.exists(): raise ValueError("backup destination already exists")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        target = sqlite3.connect(destination)
+        try: self.db.backup(target)
+        finally: target.close()
+        digest = hashlib.sha256(destination.read_bytes()).hexdigest()
+        result = {"path": str(destination), "sha256": digest, "audit_chain_valid": self.verify_audit_chain()}
+        self.audit("database.backed_up", result)
+        return result

@@ -46,3 +46,5 @@ PYTHONPATH=src python3 -m dopos_core.server --database dopos.db
 ```
 
 Its local API exposes `GET /health`, `GET /diary`, `POST /work-items`, `POST /plans`, `POST /plans/{id}/approve`, and `POST /plans/{id}/execute`. Only the allowlisted read-only actions `status.summary` and `diary.preview` are implemented in this first slice.
+
+The core also verifies its chained audit events and supports an explicit local SQLite backup through `OperationsService.backup_to(...)`. Backup/restore acceptance tests prove recovery of work-item state and audit integrity; backup retention and off-machine storage are not implemented yet.

@@ -1,4 +1,5 @@
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
@@ -19,5 +20,15 @@ class OperationsServiceTests(unittest.TestCase):
         service=OperationsService(); service.create_work_item("Audit", "verify append only")
         with self.assertRaises(sqlite3.DatabaseError): service.db.execute("DELETE FROM audit_events")
         service.close()
+
+    def test_backup_restores_auditable_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            service=OperationsService(); service.create_work_item("Backup", "prove recovery path")
+            backup=service.backup_to(Path(directory) / "dopos-backup.db")
+            restored=OperationsService(backup["path"])
+            self.assertTrue(backup["audit_chain_valid"])
+            self.assertTrue(restored.verify_audit_chain())
+            self.assertEqual(restored.status_summary()["work_items"], 1)
+            restored.close(); service.close()
 
 import sqlite3
