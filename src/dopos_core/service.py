@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ollama.status", "quality.status", "backup.create", "backup.verify", "workspace.status"}
+SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ollama.status", "quality.status", "backup.create", "backup.verify", "workspace.status", "workspace.snapshot"}
 MAX_WORK_ITEM_TITLE = 160
 MAX_WORK_ITEM_REQUEST = 8_000
 MAX_WORKSPACE_QUERY = 160
@@ -175,7 +175,10 @@ class OperationsService:
         if "github" in request or "repository" in request or "repo" in request: actions.append("github.status")
         if "ollama" in request or "model" in request or "ai runtime" in request: actions.append("ollama.status")
         if any(word in request for word in ("test", "build", "ci", "validate", "quality")): actions.append("quality.status")
-        if any(word in request for word in ("workspace", "document", "documents", "folder", "folders", "file", "files")): actions.append("workspace.status")
+        if any(word in request for word in ("workspace", "document", "documents", "folder", "folders", "file", "files")):
+            actions.append("workspace.status")
+        if any(word in request for word in ("workspace snapshot", "document snapshot", "workspace version", "document version", "catalog revision")):
+            actions.append("workspace.snapshot")
         if any(term in request for term in ("recovery", "integrity", "verify backup", "backup health")):
             actions.append("backup.verify")
         elif "backup" in request:
@@ -252,6 +255,7 @@ class OperationsService:
             elif action == "backup.create": results.append({"action": action, "result": self.create_backup()})
             elif action == "backup.verify": results.append({"action": action, "result": self.verify_backups()})
             elif action == "workspace.status": results.append({"action": action, "result": self.workspace_status()})
+            elif action == "workspace.snapshot": results.append({"action": action, "result": self.workspace_snapshot()})
             else: raise ValueError("action is not safe")
         self.db.execute("UPDATE plans SET state=? WHERE id=?", ("completed", plan_id))
         self.db.execute("UPDATE work_items SET state=? WHERE id=?", ("completed", row["work_item_id"])); self.db.commit()
@@ -371,7 +375,7 @@ class OperationsService:
         needle = query.strip().casefold()
         root = self.workspace_directory
         if not root.is_dir():
-            return {"available": True, "configured": False, "query": query, "documents": [], "count": 0, "message": "Local workspace directory has not been created yet."}
+            return {"available": True, "configured": False, "query": query, "documents": [], "count": 0, "catalog_revision": None, "message": "Local workspace directory has not been created yet."}
         allowed_suffixes = {".md", ".txt", ".pdf", ".docx", ".xlsx", ".pptx", ".ods", ".odt", ".odp"}
         documents = []
         for path in sorted(root.rglob("*")):
@@ -387,7 +391,14 @@ class OperationsService:
             except (OSError, ValueError):
                 continue
         message = "Local workspace search completed without reading document contents." if needle else "Local workspace inventory completed without reading document contents."
-        return {"available": True, "configured": True, "query": query, "documents": documents, "count": len(documents), "message": message}
+        revision_input = "\n".join(f"{document['path']}|{document['size']}|{document['modified_at']}" for document in documents)
+        return {"available": True, "configured": True, "query": query, "documents": documents, "count": len(documents), "catalog_revision": hashlib.sha256(revision_input.encode()).hexdigest(), "message": message}
+
+    @synchronized
+    def workspace_snapshot(self) -> dict[str, Any]:
+        """Capture an approved, metadata-only catalog revision in the audit trail."""
+        status = self.workspace_status()
+        return {"available": status["available"], "configured": status["configured"], "document_count": status["count"], "catalog_revision": status["catalog_revision"], "message": "Metadata-only workspace snapshot captured in the approved plan evidence."}
 
     @synchronized
     def quality_status(self) -> dict[str, Any]:

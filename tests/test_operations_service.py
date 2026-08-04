@@ -109,9 +109,17 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertEqual([entry["path"] for entry in found["documents"]], ["Projects/proposal.md"])
             with self.assertRaisesRegex(ValueError, "at most 160"):
                 service.workspace_status("x" * 161)
-            item=service.create_work_item("Workspace", "Show document and folder workspace status")
+            snapshot = service.workspace_snapshot()
+            self.assertEqual(snapshot["document_count"], 2)
+            self.assertTrue(snapshot["catalog_revision"])
+            item=service.create_work_item("Workspace", "Show document workspace version snapshot")
             plan=service.plan_for_request(item["id"])
             self.assertIn("workspace.status", plan["actions"])
+            self.assertIn("workspace.snapshot", plan["actions"])
+            service.approve_plan(plan["id"])
+            done = service.execute_plan(plan["id"])
+            captured = next(entry["result"] for entry in done["results"] if entry["action"] == "workspace.snapshot")
+            self.assertEqual(captured["catalog_revision"], snapshot["catalog_revision"])
             service.close()
 
     def test_autonomous_loop_status_projects_bounded_evidence_without_command_output(self):
