@@ -100,7 +100,7 @@ PAGE = r'''<!doctype html>
         <div class="side-section"><h3>Workspace</h3><form class="workspace-search" onsubmit="searchWorkspace(event)"><input id="workspace-query" aria-label="Search workspace filenames and folders" maxlength="160" placeholder="Find a file or folder"><button class="button" type="submit">Find</button></form><div id="workspace-results" class="empty">Search stays local and reads names only.</div></div>
         <div class="steps"><div class="step active"><strong>Goal</strong><small>Waiting for your request</small></div><div class="step"><strong>Plan</strong><small>Safe actions only</small></div><div class="step"><strong>Build</strong><small>Approval required</small></div><div class="step"><strong>Test</strong><small>Evidence captured</small></div><div class="step"><strong>Verify</strong><small>Diary updated</small></div></div>
         <div class="side-section"><h3>Recent work</h3><div id="recent" class="empty">No work yet.</div></div>
-        <div class="side-section"><div class="side-head"><h3>Diary</h3><a class="side-link" href="/journal.md" download="dopos-journal.md">Export Markdown</a></div><div id="diary" class="empty">No activity yet.</div></div>
+        <div class="side-section"><div class="side-head"><h3>Diary</h3><a class="side-link" href="/journal.md" download="dopos-journal.md" aria-label="Export Diary as Markdown">Export Markdown</a></div><div id="diary" class="empty">No activity yet.</div></div>
       </aside>
     </main>
   </div>
