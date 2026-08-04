@@ -31,4 +31,11 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertEqual(restored.status_summary()["work_items"], 1)
             restored.close(); service.close()
 
+    def test_reject_and_kill_switch_block_execution(self):
+        service=OperationsService(); item=service.create_work_item("Controls", "check stop controls")
+        rejected=service.propose_plan(item["id"], ["status.summary"]); self.assertEqual(service.reject_plan(rejected["id"])["state"], "rejected")
+        approved=service.propose_plan(item["id"], ["status.summary"]); service.approve_plan(approved["id"]); service.set_kill_switch(True)
+        with self.assertRaisesRegex(ValueError, "kill switch"): service.execute_plan(approved["id"])
+        service.close()
+
 import sqlite3

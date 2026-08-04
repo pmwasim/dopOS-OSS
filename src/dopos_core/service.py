@@ -27,9 +27,12 @@ class OperationsService:
         CREATE TABLE IF NOT EXISTS work_items (id INTEGER PRIMARY KEY, title TEXT NOT NULL, request TEXT NOT NULL, state TEXT NOT NULL, created_at TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS plans (id INTEGER PRIMARY KEY, work_item_id INTEGER NOT NULL REFERENCES work_items(id), actions_json TEXT NOT NULL, state TEXT NOT NULL, created_at TEXT NOT NULL, approved_at TEXT);
         CREATE TABLE IF NOT EXISTS audit_events (id INTEGER PRIMARY KEY, kind TEXT NOT NULL, payload_json TEXT NOT NULL, created_at TEXT NOT NULL, previous_hash TEXT NOT NULL, event_hash TEXT NOT NULL UNIQUE);
+        CREATE TABLE IF NOT EXISTS controls (name TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL);
         CREATE TRIGGER IF NOT EXISTS audit_events_no_update BEFORE UPDATE ON audit_events BEGIN SELECT RAISE(ABORT, 'audit events are append-only'); END;
         CREATE TRIGGER IF NOT EXISTS audit_events_no_delete BEFORE DELETE ON audit_events BEGIN SELECT RAISE(ABORT, 'audit events are append-only'); END;
         """)
+        if not self.db.execute("SELECT 1 FROM controls WHERE name='kill_switch'").fetchone():
+            self.db.execute("INSERT INTO controls(name,value,updated_at) VALUES(?,?,?)", ("kill_switch", "off", self.now())); self.db.commit()
 
     @synchronized
     def close(self) -> None:
@@ -70,9 +73,27 @@ class OperationsService:
         result={"id":plan_id,"state":"approved","approved_at":approved_at}; self.audit("plan.approved", result); return result
 
     @synchronized
+    def reject_plan(self, plan_id: int) -> dict[str, Any]:
+        row=self.db.execute("SELECT state FROM plans WHERE id=?", (plan_id,)).fetchone()
+        if not row: raise ValueError("plan not found")
+        if row["state"] != "awaiting_approval": raise ValueError("plan is not awaiting approval")
+        self.db.execute("UPDATE plans SET state=? WHERE id=?", ("rejected", plan_id)); self.db.commit()
+        result={"id":plan_id,"state":"rejected"}; self.audit("plan.rejected", result); return result
+
+    @synchronized
+    def set_kill_switch(self, enabled: bool) -> dict[str, Any]:
+        value="on" if enabled else "off"; now=self.now(); self.db.execute("UPDATE controls SET value=?,updated_at=? WHERE name='kill_switch'", (value, now)); self.db.commit()
+        result={"kill_switch":value,"updated_at":now}; self.audit("control.kill_switch_changed", result); return result
+
+    @synchronized
+    def kill_switch_enabled(self) -> bool:
+        return self.db.execute("SELECT value FROM controls WHERE name='kill_switch'").fetchone()[0] == "on"
+
+    @synchronized
     def execute_plan(self, plan_id: int) -> dict[str, Any]:
         row=self.db.execute("SELECT * FROM plans WHERE id=?", (plan_id,)).fetchone()
         if not row: raise ValueError("plan not found")
+        if self.kill_switch_enabled(): raise ValueError("execution blocked by kill switch")
         if row["state"] != "approved": raise ValueError("plan requires approval")
         actions=json.loads(row["actions_json"]); results=[]
         for action in actions:
