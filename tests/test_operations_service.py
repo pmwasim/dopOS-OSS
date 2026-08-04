@@ -651,6 +651,20 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertIn("ollama.status", plan["actions"])
         service.close()
 
+
+    def test_ollama_status_reports_missing_executable_reason(self):
+        import shutil
+        service = OperationsService()
+        original = shutil.which
+        try:
+            shutil.which = lambda name: None if name == "ollama" else original(name)
+            status = service.ollama_status()
+            self.assertFalse(status["available"])
+            self.assertIn("ollama executable not found", status["reason"])
+        finally:
+            shutil.which = original
+        service.close()
+
     def test_ollama_adapter_is_allowlisted_and_routed(self):
         service=OperationsService(); item=service.create_work_item("Models", "Show local Ollama model status")
         plan=service.plan_for_request(item["id"]); self.assertIn("ollama.status", plan["actions"])
