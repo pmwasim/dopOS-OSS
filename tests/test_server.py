@@ -88,6 +88,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("state.safety", page)
         self.assertIn("Nothing waiting", page)
         self.assertIn("retention unset", page)
+        self.assertIn("audit verified", page)
+        self.assertIn("needs review", page)
         self.assertIn("retention on", page)
         self.assertIn("new work can be planned", page)
         self.assertIn("execution ready", page)
