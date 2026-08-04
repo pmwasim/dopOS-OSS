@@ -51,6 +51,8 @@ class OperationsService:
     def display_text(value: str, limit: int = 1000) -> str:
         """Normalize legacy terminal output before returning it to a browser."""
         value = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", value)
+        if "...done thinking." in value:
+            value = value.split("...done thinking.", 1)[1]
         return " ".join(value.split())[:limit]
 
     @synchronized

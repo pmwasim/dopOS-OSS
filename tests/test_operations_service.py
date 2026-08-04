@@ -23,7 +23,7 @@ class OperationsServiceTests(unittest.TestCase):
 
     def test_recent_work_sanitizes_legacy_terminal_control_codes(self):
         service=OperationsService(); item=service.create_work_item("Legacy", "Show Docker status")
-        service.propose_plan(item["id"], ["status.summary"], "Safe\x1b[1D\x1b[K explanation")
+        service.propose_plan(item["id"], ["status.summary"], "Thinking...\x1b[1D\x1b[K ...done thinking. Safe explanation")
         self.assertEqual(service.work_item(item["id"])["plan"]["explanation"], "Safe explanation"); service.close()
     def test_rejects_unallowlisted_actions(self):
         service=OperationsService(); item=service.create_work_item("Unsafe", "do not run arbitrary command")
