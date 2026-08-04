@@ -280,6 +280,8 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertFalse(health["backup_retention"]["prune_enabled"])
         self.assertIn("configured", health["queue"])
         self.assertIn("count", health["queue"])
+        self.assertIn("next_title", health["queue"])
+        self.assertIsNone(health["queue"]["next_title"])
         self.assertIn("configured", health["automation"])
         self.assertIn("latest_result", health["automation"])
         service.close()

@@ -30,6 +30,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(health["backup_count"], 0)
         self.assertIn("configured", health["queue"])
         self.assertIn("count", health["queue"])
+        self.assertIn("next_title", health["queue"])
         self.assertIn("configured", health["automation"])
         self.assertIn("latest_result", health["automation"])
         today = self.request("/today")

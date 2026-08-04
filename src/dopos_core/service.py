@@ -321,6 +321,7 @@ class OperationsService:
             "queue": {
                 "configured": queue.get("configured", False),
                 "count": queue.get("count", 0),
+                "next_title": queue["items"][0]["title"] if queue.get("items") else None,
             },
             "automation": {
                 "configured": loop.get("configured", False),
