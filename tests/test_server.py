@@ -24,6 +24,9 @@ class ServerTests(unittest.TestCase):
         today = self.request("/today")
         self.assertEqual(today["needs_decision"], [])
         self.assertTrue(today["recovery"]["audit_chain_valid"])
+        loop = self.request("/autonomous-loop")
+        self.assertEqual(loop["count"], 0)
+        self.assertIn("cycles", loop)
         with self.assertRaises(HTTPError) as too_long:
             self.request("/work-items", {"title":"x" * 161, "request":"safe request"})
         self.assertEqual(too_long.exception.code, 400)
@@ -35,6 +38,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Diary", page)
         self.assertIn("Find a file or folder", page)
         self.assertIn("searchWorkspace", page)
+        self.assertIn("/autonomous-loop", page)
         tools = self.request("/tools/status")
         self.assertEqual(set(tools), {"docker", "github", "ollama"})
         workspace = self.request("/workspace")

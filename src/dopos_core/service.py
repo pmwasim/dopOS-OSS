@@ -19,6 +19,7 @@ SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.stat
 MAX_WORK_ITEM_TITLE = 160
 MAX_WORK_ITEM_REQUEST = 8_000
 MAX_WORKSPACE_QUERY = 160
+MAX_LOOP_REPORT_BYTES = 256_000
 
 def synchronized(method):
     def wrapped(self, *args, **kwargs):
@@ -32,6 +33,7 @@ class OperationsService:
         self.project_root = Path(__file__).resolve().parents[2]
         self.backup_directory = Path(os.environ.get("DOPOS_BACKUP_DIR", self.project_root / "workspace/generated/backups"))
         self.workspace_directory = Path(os.environ.get("DOPOS_WORKSPACE_DIR", self.project_root / "workspace/documents"))
+        self.loop_directory = Path(os.environ.get("DOPOS_LOOP_EVIDENCE_DIR", self.project_root / "workspace/generated/autonomous-loop"))
         self.db = sqlite3.connect(database, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript("""
@@ -304,6 +306,37 @@ class OperationsService:
             "github": self.github_status(),
             "ollama": self.ollama_status(),
         }
+
+    @synchronized
+    def autonomous_loop_status(self, limit: int = 8) -> dict[str, Any]:
+        """Project bounded summaries of local loop evidence, never command output."""
+        root = self.loop_directory
+        if not root.is_dir():
+            return {"available": True, "configured": False, "cycles": [], "count": 0, "message": "No local autonomous-loop evidence directory has been created yet."}
+        cycles = []
+        for run in sorted(root.iterdir(), reverse=True):
+            if len(cycles) >= max(1, min(limit, 20)):
+                break
+            report = run / "report.json"
+            try:
+                if not run.is_dir() or run.is_symlink() or not report.is_file() or report.is_symlink() or report.stat().st_size > MAX_LOOP_REPORT_BYTES:
+                    continue
+                payload = json.loads(report.read_text(encoding="utf-8"))
+                if not isinstance(payload, dict):
+                    continue
+                phases = payload.get("phases", [])
+                cycles.append({
+                    "id": run.name,
+                    "title": self.display_text(str(payload.get("title", "Autonomous SaaS engineering cycle")), 160),
+                    "result": payload.get("result") if payload.get("result") in {"passed", "failed", "blocked", "planned"} else "unknown",
+                    "started_at": self.display_text(str(payload.get("started_at", "")), 64),
+                    "completed_at": self.display_text(str(payload.get("completed_at", "")), 64),
+                    "work_item": self.display_text(str((payload.get("work_item") or {}).get("title", "")), 160),
+                    "phases": [{"name": self.display_text(str(phase.get("name", "")), 64), "result": phase.get("result") if phase.get("result") in {"passed", "failed", "planned"} else "unknown"} for phase in phases if isinstance(phase, dict)],
+                })
+            except (OSError, json.JSONDecodeError, TypeError, ValueError):
+                continue
+        return {"available": True, "configured": True, "cycles": cycles, "count": len(cycles), "message": "Autonomous-loop evidence summaries are read-only."}
 
     @synchronized
     def workspace_status(self, query: str = "", limit: int = 100) -> dict[str, Any]:

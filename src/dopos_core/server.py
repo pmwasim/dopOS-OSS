@@ -34,6 +34,7 @@ class Handler(BaseHTTPRequestHandler):
             health = self.service.health_status()
             return self.reply(200 if health["status"] == "ok" else 503, health)
         if self.path == "/today": return self.reply(200, self.service.today())
+        if self.path == "/autonomous-loop": return self.reply(200, self.service.autonomous_loop_status())
         if self.path == "/tools/status": return self.reply(200, self.service.tool_status())
         if urlsplit(self.path).path == "/workspace":
             try:

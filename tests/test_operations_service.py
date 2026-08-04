@@ -114,6 +114,17 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertIn("workspace.status", plan["actions"])
             service.close()
 
+    def test_autonomous_loop_status_projects_bounded_evidence_without_command_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); run = root / "20260804T220000Z"; run.mkdir()
+            (run / "report.json").write_text('{"title":"Local loop","result":"passed","started_at":"2026-08-04T22:00:00Z","completed_at":"2026-08-04T22:01:00Z","work_item":{"title":"Safe enhancement"},"phases":[{"name":"test","result":"passed","commands":[{"stdout":"secret output"}]}]}')
+            service = OperationsService(); service.loop_directory = root
+            status = service.autonomous_loop_status()
+            self.assertTrue(status["configured"]); self.assertEqual(status["count"], 1)
+            self.assertEqual(status["cycles"][0]["result"], "passed")
+            self.assertNotIn("commands", status["cycles"][0]); self.assertNotIn("secret output", str(status))
+            service.close()
+
     def test_backup_restores_auditable_state(self):
         with tempfile.TemporaryDirectory() as directory:
             service=OperationsService(); service.create_work_item("Backup", "prove recovery path")
