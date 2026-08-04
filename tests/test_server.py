@@ -86,6 +86,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Stop control enabled", page)
         self.assertIn("Plan rejected", page)
         self.assertIn('Preparing the smallest safe plan…', page)
+        self.assertIn('Ready to execute plan', page)
         self.assertIn('This plan is frozen. It contains only local, read-only checks.', page)
         self.assertIn('The approved local checks finished successfully.', page)
         self.assertIn("No action was run.", page)
