@@ -96,6 +96,14 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_request_router_adds_loop_status(self):
+        service=OperationsService()
+        item=service.create_work_item("Loop route", "Show engineering loop evidence and autonomous loop status")
+        plan=service.plan_for_request(item["id"])
+        self.assertIn("loop.status", plan["actions"])
+        service.close()
+
     def test_request_router_adds_queue_status(self):
         service=OperationsService()
         item=service.create_work_item("Queue route", "Show autonomous queue status and queued work")
