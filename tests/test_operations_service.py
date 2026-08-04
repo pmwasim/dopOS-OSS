@@ -189,6 +189,13 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertNotIn("backup.create", plan["actions"])
         service.close()
 
+
+    def test_safe_actions_exclude_shell_aliases(self):
+        from dopos_core.service import SAFE_ACTIONS
+        banned = {"shell", "bash", "sh", "system", "shell.run", "shell.rm_rf"}
+        self.assertTrue(SAFE_ACTIONS.isdisjoint(banned))
+        self.assertFalse(any(action.startswith("shell.") for action in SAFE_ACTIONS))
+
     def test_safe_actions_include_loop_queue_and_retention_adapters(self):
         from dopos_core.service import SAFE_ACTIONS
         self.assertGreaterEqual(len(SAFE_ACTIONS), 13)
