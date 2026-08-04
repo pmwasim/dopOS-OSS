@@ -1,0 +1,23 @@
+import sys
+import unittest
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
+from dopos_core import OperationsService
+
+class OperationsServiceTests(unittest.TestCase):
+    def test_approval_gated_safe_execution_and_diary(self):
+        service=OperationsService(); item=service.create_work_item("Check host", "Show safe operational status")
+        plan=service.propose_plan(item["id"], ["status.summary"])
+        with self.assertRaisesRegex(ValueError, "requires approval"): service.execute_plan(plan["id"])
+        service.approve_plan(plan["id"]); done=service.execute_plan(plan["id"])
+        self.assertEqual(done["state"], "completed"); self.assertGreaterEqual(len(service.diary()), 4); service.close()
+    def test_rejects_unallowlisted_actions(self):
+        service=OperationsService(); item=service.create_work_item("Unsafe", "do not run arbitrary command")
+        with self.assertRaisesRegex(ValueError, "unsupported"): service.propose_plan(item["id"], ["shell.rm_rf"])
+        service.close()
+    def test_audit_is_append_only(self):
+        service=OperationsService(); service.create_work_item("Audit", "verify append only")
+        with self.assertRaises(sqlite3.DatabaseError): service.db.execute("DELETE FROM audit_events")
+        service.close()
+
+import sqlite3

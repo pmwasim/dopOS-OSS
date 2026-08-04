@@ -35,3 +35,14 @@ repository. Start with the [vision](docs/VISION.md), [mission](docs/MISSION.md),
 The project is public but the final open-source licence has not been selected.
 Do not contribute production code until the licence decision in
 [LICENSE-DECISION.md](docs/LICENSE-DECISION.md) is resolved.
+# dopOS-OSS
+
+## Local core quick start
+
+The first public implementation slice is a local, dependency-free operations core: work item → plan → explicit approval → safe execution → chained audit and Diary events.
+
+```sh
+PYTHONPATH=src python3 -m dopos_core.server --database dopos.db
+```
+
+Its local API exposes `GET /health`, `GET /diary`, `POST /work-items`, `POST /plans`, `POST /plans/{id}/approve`, and `POST /plans/{id}/execute`. Only the allowlisted read-only actions `status.summary` and `diary.preview` are implemented in this first slice.
