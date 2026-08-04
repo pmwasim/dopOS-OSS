@@ -172,6 +172,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Private repository", page)
         self.assertIn("Public repository", page)
         self.assertIn("Local AI models", page)
+        self.assertIn("No installed models were listed.", page)
         self.assertIn("Local quality checks", page)
         self.assertIn("backups ·", page)
         self.assertIn("rev ·", page)

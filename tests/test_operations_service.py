@@ -281,12 +281,29 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertIn("configured", health["queue"])
         self.assertIn("count", health["queue"])
         self.assertIn("next_title", health["queue"])
-        self.assertIsNone(health["queue"]["next_title"])
         self.assertIn("configured", health["automation"])
         self.assertIn("latest_result", health["automation"])
         self.assertIn("latest_title", health["automation"])
-        self.assertIsNone(health["automation"]["latest_title"])
         service.close()
+
+
+    def test_health_status_includes_queue_next_title_when_inbox_present(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as directory:
+            inbox = Path(directory) / "inbox"
+            evidence = Path(directory) / "evidence"
+            inbox.mkdir(); evidence.mkdir()
+            (inbox / "010-next.md").write_text("# Queue next item\n\nBody stays private.")
+            run = evidence / "cycle-a"; run.mkdir()
+            (run / "report.json").write_text('{"title":"Cycle A","result":"passed","started_at":"t","completed_at":"t","phases":[],"work_item":{"title":"x"}}')
+            service = OperationsService(); service.inbox_directory = inbox; service.loop_directory = evidence
+            health = service.health_status()
+            self.assertEqual(health["queue"]["count"], 1)
+            self.assertEqual(health["queue"]["next_title"], "Queue next item")
+            self.assertEqual(health["automation"]["latest_result"], "passed")
+            self.assertEqual(health["automation"]["latest_title"], "Cycle A")
+            service.close()
 
     def test_request_router_adds_health_status_without_backup_create(self):
         service = OperationsService()
@@ -356,6 +373,15 @@ class OperationsServiceTests(unittest.TestCase):
             item = service.create_work_item(title, request)
             plan = service.plan_for_request(item["id"])
             self.assertIn("control.status", plan["actions"])
+        service.close()
+
+
+    def test_request_router_adds_control_status_for_bare_kill_switch(self):
+        service = OperationsService()
+        item = service.create_work_item("Safety", "Show kill switch")
+        plan = service.plan_for_request(item["id"])
+        self.assertIn("control.status", plan["actions"])
+        self.assertNotIn("backup.create", plan["actions"])
         service.close()
 
     def test_control_status_action_does_not_toggle_kill_switch(self):
