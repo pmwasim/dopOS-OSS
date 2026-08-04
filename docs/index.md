@@ -32,6 +32,7 @@ This is the navigation root for the CompanyOS operating repository. All controll
 ## Key controls
 - [Documentation map](00-control/documentation-map.md)
 - [Question resolution](00-control/question-resolution-procedure.md)
+- [Autonomous SaaS engineering loop](12-technology-ai/autonomous-saas-engineering-loop.md)
 - [Gap register](00-control/unresolved-gaps-register.md)
 - [Assumptions register](00-control/assumptions-register.md)
 - [Documents register](23-registers/documents-register.md)

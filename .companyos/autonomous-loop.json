@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "project": "dopOS-OSS",
+  "phases": {
+    "inspect": ["git status --short", "git diff --check"],
+    "plan": [],
+    "implement": [],
+    "build": [],
+    "test": ["python3 -m unittest discover -s tests -v"],
+    "verify": ["python3 scripts/validate_companyos.py --repo ."],
+    "package": [],
+    "recover": ["git status --short", "git diff --check"]
+  },
+  "release": {
+    "enabled": false,
+    "commands": [],
+    "requirements": ["approved_change", "clean_validation", "reviewed_release_plan", "rollback_plan"]
+  },
+  "blocked_capabilities": ["deploy", "publish", "network", "secrets", "production", "destructive_git"]
+}
