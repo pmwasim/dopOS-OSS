@@ -62,6 +62,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("/journal.md", page)
         self.assertIn("Export Markdown", page)
         self.assertIn("Export Diary as Markdown", page)
+        self.assertIn('aria-label="Ask dopOS anything"', page)
+        self.assertIn('aria-label="Send request"', page)
         self.assertIn('aria-label="Export Diary as Markdown"', page)
         self.assertIn("tool-ci", page)
         self.assertIn("Available locally", page)
