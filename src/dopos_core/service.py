@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ollama.status", "quality.status", "backup.create", "backup.verify"}
+SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ollama.status", "quality.status", "backup.create", "backup.verify", "workspace.status"}
 MAX_WORK_ITEM_TITLE = 160
 MAX_WORK_ITEM_REQUEST = 8_000
 
@@ -30,6 +30,7 @@ class OperationsService:
         self._lock = threading.RLock()
         self.project_root = Path(__file__).resolve().parents[2]
         self.backup_directory = Path(os.environ.get("DOPOS_BACKUP_DIR", self.project_root / "workspace/generated/backups"))
+        self.workspace_directory = Path(os.environ.get("DOPOS_WORKSPACE_DIR", self.project_root / "workspace/documents"))
         self.db = sqlite3.connect(database, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript("""
@@ -169,6 +170,7 @@ class OperationsService:
         if "github" in request or "repository" in request or "repo" in request: actions.append("github.status")
         if "ollama" in request or "model" in request or "ai runtime" in request: actions.append("ollama.status")
         if any(word in request for word in ("test", "build", "ci", "validate", "quality")): actions.append("quality.status")
+        if any(word in request for word in ("workspace", "document", "documents", "folder", "folders", "file", "files")): actions.append("workspace.status")
         if any(term in request for term in ("recovery", "integrity", "verify backup", "backup health")):
             actions.append("backup.verify")
         elif "backup" in request:
@@ -244,6 +246,7 @@ class OperationsService:
             elif action == "quality.status": results.append({"action": action, "result": self.quality_status()})
             elif action == "backup.create": results.append({"action": action, "result": self.create_backup()})
             elif action == "backup.verify": results.append({"action": action, "result": self.verify_backups()})
+            elif action == "workspace.status": results.append({"action": action, "result": self.workspace_status()})
             else: raise ValueError("action is not safe")
         self.db.execute("UPDATE plans SET state=? WHERE id=?", ("completed", plan_id))
         self.db.execute("UPDATE work_items SET state=? WHERE id=?", ("completed", row["work_item_id"])); self.db.commit()
@@ -300,6 +303,26 @@ class OperationsService:
             "github": self.github_status(),
             "ollama": self.ollama_status(),
         }
+
+    @synchronized
+    def workspace_status(self, limit: int = 100) -> dict[str, Any]:
+        """Inventory local workspace files without reading contents or following links."""
+        root = self.workspace_directory
+        if not root.is_dir():
+            return {"available": True, "configured": False, "documents": [], "count": 0, "message": "Local workspace directory has not been created yet."}
+        allowed_suffixes = {".md", ".txt", ".pdf", ".docx", ".xlsx", ".pptx", ".ods", ".odt", ".odp"}
+        documents = []
+        for path in sorted(root.rglob("*")):
+            if len(documents) >= max(1, min(limit, 100)):
+                break
+            if not path.is_file() or path.is_symlink() or path.suffix.lower() not in allowed_suffixes:
+                continue
+            try:
+                relative = path.relative_to(root)
+                documents.append({"path": str(relative), "extension": path.suffix.lower(), "size": path.stat().st_size, "modified_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()})
+            except (OSError, ValueError):
+                continue
+        return {"available": True, "configured": True, "documents": documents, "count": len(documents), "message": "Local workspace inventory completed without reading document contents."}
 
     @synchronized
     def quality_status(self) -> dict[str, Any]:

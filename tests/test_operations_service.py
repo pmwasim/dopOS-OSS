@@ -96,6 +96,19 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(service.status_summary()["work_items"], 0)
         service.close()
 
+    def test_workspace_inventory_is_read_only_and_router_uses_allowlisted_action(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); (root / "Projects").mkdir(); (root / "Projects" / "proposal.md").write_text("private draft")
+            (root / "readme.txt").write_text("notes"); (root / "ignore.exe").write_text("not a document")
+            service=OperationsService(); service.workspace_directory=root
+            status=service.workspace_status()
+            self.assertTrue(status["configured"]); self.assertEqual(status["count"], 2)
+            self.assertEqual([entry["path"] for entry in status["documents"]], ["Projects/proposal.md", "readme.txt"])
+            item=service.create_work_item("Workspace", "Show document and folder workspace status")
+            plan=service.plan_for_request(item["id"])
+            self.assertIn("workspace.status", plan["actions"])
+            service.close()
+
     def test_backup_restores_auditable_state(self):
         with tempfile.TemporaryDirectory() as directory:
             service=OperationsService(); service.create_work_item("Backup", "prove recovery path")
