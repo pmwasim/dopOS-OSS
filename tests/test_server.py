@@ -20,6 +20,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Ask dopOS anything", page)
         self.assertIn("Live Work", page)
         self.assertIn("Diary", page)
+        tools = self.request("/tools/status")
+        self.assertEqual(set(tools), {"docker", "github", "ollama"})
         item=self.request("/work-items", {"title":"Test","request":"Check Docker status"}); plan=self.request("/plans/from-request", {"work_item_id":item["id"]})
         self.request(f"/plans/{plan['id']}/approve", {}); done=self.request(f"/plans/{plan['id']}/execute", {})
         self.assertEqual(done["state"], "completed"); self.assertGreaterEqual(len(self.request("/diary")), 4)

@@ -149,6 +149,15 @@ class OperationsService:
         return {"work_items": self.db.execute("SELECT COUNT(*) FROM work_items").fetchone()[0], "plans": self.db.execute("SELECT COUNT(*) FROM plans").fetchone()[0], "audit_events": self.db.execute("SELECT COUNT(*) FROM audit_events").fetchone()[0]}
 
     @synchronized
+    def tool_status(self) -> dict[str, dict[str, Any]]:
+        """Read-only availability snapshot for the local control-room header."""
+        return {
+            "docker": self.docker_status(),
+            "github": self.github_status(),
+            "ollama": self.ollama_status(),
+        }
+
+    @synchronized
     def docker_status(self) -> dict[str, Any]:
         """Read-only adapter; never interpolates user input into a command."""
         executable = shutil.which("docker")
