@@ -177,6 +177,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("queue ·", page)
         self.assertIn('queue · ${result.queue && result.queue.configured ? ((result.queue.count || 0)', page)
         self.assertIn("automation ·", page)
+        self.assertIn("automation · ${result.automation && result.automation.configured ? (result.automation.latest_result || 'ready') : 'unset'}", page)
         self.assertIn("GitHub repository", page)
         self.assertIn("Private repository", page)
         self.assertIn("Public repository", page)
