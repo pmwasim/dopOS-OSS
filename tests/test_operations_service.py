@@ -20,6 +20,11 @@ class OperationsServiceTests(unittest.TestCase):
         recent=service.work_items(); self.assertEqual(recent[0]["id"], item["id"])
         self.assertEqual(recent[0]["plan"]["id"], plan["id"])
         self.assertEqual(service.work_item(item["id"])["plan"]["state"], "awaiting_approval"); service.close()
+
+    def test_recent_work_sanitizes_legacy_terminal_control_codes(self):
+        service=OperationsService(); item=service.create_work_item("Legacy", "Show Docker status")
+        service.propose_plan(item["id"], ["status.summary"], "Safe\x1b[1D\x1b[K explanation")
+        self.assertEqual(service.work_item(item["id"])["plan"]["explanation"], "Safe explanation"); service.close()
     def test_rejects_unallowlisted_actions(self):
         service=OperationsService(); item=service.create_work_item("Unsafe", "do not run arbitrary command")
         with self.assertRaisesRegex(ValueError, "unsupported"): service.propose_plan(item["id"], ["shell.rm_rf"])

@@ -47,6 +47,12 @@ class OperationsService:
     def now() -> str:
         return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
+    @staticmethod
+    def display_text(value: str, limit: int = 1000) -> str:
+        """Normalize legacy terminal output before returning it to a browser."""
+        value = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", value)
+        return " ".join(value.split())[:limit]
+
     @synchronized
     def audit(self, kind: str, payload: dict[str, Any]) -> int:
         previous = self.db.execute("SELECT event_hash FROM audit_events ORDER BY id DESC LIMIT 1").fetchone()
@@ -83,7 +89,8 @@ class OperationsService:
             item["plan"] = {
                 "id": row["plan_id"], "actions": json.loads(row["actions_json"]),
                 "state": row["plan_state"], "created_at": row["plan_created_at"],
-                "approved_at": row["approved_at"], "explanation": row["explanation"],
+                "approved_at": row["approved_at"],
+                "explanation": self.display_text(row["explanation"]),
             }
         else:
             item["plan"] = None
@@ -134,9 +141,8 @@ class OperationsService:
             # deterministic planning path.  The local model is best-effort.
             result=subprocess.run([executable, "run", "--hidethinking", "--think=false", "--nowordwrap", "qwen3:latest", prompt], text=True, capture_output=True, timeout=8, check=False)
         except subprocess.TimeoutExpired: return fallback
-        text=re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", result.stdout).strip()
-        text=" ".join(text.split())
-        return text[:1000] if result.returncode == 0 and text else fallback
+        text=self.display_text(result.stdout)
+        return text if result.returncode == 0 and text else fallback
 
     @synchronized
     def approve_plan(self, plan_id: int) -> dict[str, Any]:
