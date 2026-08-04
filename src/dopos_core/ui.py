@@ -83,7 +83,7 @@ PAGE = r'''<!doctype html>
 </head>
 <body>
   <div class="shell">
-    <header class="top"><div class="brand">dopOS</div><div class="clock" id="clock"></div><div class="tools" aria-label="Local tool status"><span id="tool-docker">Docker</span><span id="tool-github">GitHub</span><span id="tool-ollama">Local AI</span></div></header>
+    <header class="top"><div class="brand">dopOS</div><div class="clock" id="clock"></div><div class="tools" aria-label="Local tool status"><span id="tool-docker">Docker</span><span id="tool-github">GitHub</span><span id="tool-ci">CI</span><span id="tool-ollama">Local AI</span></div></header>
     <main class="frame">
       <section class="conversation">
         <div class="thread" id="thread"><div class="empty">Ask dopOS about this machine. It will create a safe plan and wait for your decision.</div></div>

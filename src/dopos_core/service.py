@@ -326,6 +326,7 @@ class OperationsService:
         return {
             "docker": self.docker_status(),
             "github": self.github_status(),
+            "ci": self.ci_status(),
             "ollama": self.ollama_status(),
         }
 

@@ -229,6 +229,14 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(run.call_args.args[0], ["gh", "run", "list", "--limit", "5", "--json", "status,conclusion,workflowName,headSha,createdAt,updatedAt,url"])
         service.close()
 
+    def test_tool_status_includes_read_only_ci_availability(self):
+        service=OperationsService()
+        with patch.object(service, "ci_status", return_value={"available": True, "ok": True, "runs": []}):
+            tools = service.tool_status()
+        self.assertEqual(set(tools), {"docker", "github", "ci", "ollama"})
+        self.assertTrue(tools["ci"]["available"])
+        service.close()
+
     def test_request_router_stays_within_allowlist(self):
         service=OperationsService(); item=service.create_work_item("Route", "Show Docker and GitHub repository status")
         plan=service.plan_for_request(item["id"])

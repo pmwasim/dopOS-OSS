@@ -50,7 +50,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("state.queue", page)
         self.assertIn("state.automation", page)
         tools = self.request("/tools/status")
-        self.assertEqual(set(tools), {"docker", "github", "ollama"})
+        self.assertEqual(set(tools), {"docker", "github", "ci", "ollama"})
         workspace = self.request("/workspace")
         self.assertEqual(workspace["count"], 0)
         self.assertIn("documents", workspace)
