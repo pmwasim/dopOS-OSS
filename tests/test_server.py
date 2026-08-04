@@ -57,6 +57,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Export still downloads the current journal projection.", page)
         self.assertIn("Find a file or folder", page)
         self.assertIn("searchWorkspace", page)
+        self.assertIn("folder</small>", page)
         self.assertIn("Workspace is ready and empty.", page)
         self.assertIn("api('/today')", page)
         self.assertIn("state.queue", page)
