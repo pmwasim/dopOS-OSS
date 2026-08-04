@@ -26,6 +26,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(health["workspace"]["folder_count"], 0)
         self.assertFalse(health["backup_retention"]["configured"])
         self.assertFalse(health["backup_retention"]["prune_enabled"])
+        self.assertEqual(health["backup_count"], 0)
         today = self.request("/today")
         self.assertEqual(today["needs_decision"], [])
         self.assertTrue(today["recovery"]["audit_chain_valid"])

@@ -208,8 +208,8 @@ class OperationsServiceTests(unittest.TestCase):
 
     def test_safe_actions_include_loop_queue_and_retention_adapters(self):
         from dopos_core.service import SAFE_ACTIONS
-        self.assertGreaterEqual(len(SAFE_ACTIONS), 13)
-        for action in ("loop.status", "queue.status", "backup.retention", "ci.status", "workspace.snapshot"):
+        self.assertGreaterEqual(len(SAFE_ACTIONS), 14)
+        for action in ("loop.status", "queue.status", "backup.retention", "ci.status", "workspace.snapshot", "health.status"):
             self.assertIn(action, SAFE_ACTIONS)
 
     def test_rejects_unallowlisted_actions(self):
@@ -230,8 +230,40 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(health["records"]["work_items"], 1)
         self.assertTrue(health["workspace"]["configured"])
         self.assertEqual(health["workspace"]["document_count"], 0)
+        self.assertEqual(health["backup_count"], 0)
         self.assertFalse(health["backup_retention"]["configured"])
         self.assertFalse(health["backup_retention"]["prune_enabled"])
+        service.close()
+
+    def test_request_router_adds_health_status_without_backup_create(self):
+        service = OperationsService()
+        for title, request in (
+            ("Runtime health", "Show runtime health probe"),
+            ("Service health", "Check service health status"),
+            ("System health", "Report system health"),
+        ):
+            item = service.create_work_item(title, request)
+            plan = service.plan_for_request(item["id"])
+            self.assertIn("health.status", plan["actions"])
+            self.assertNotIn("backup.create", plan["actions"])
+            self.assertNotIn("backup.verify", plan["actions"])
+        backup_health = service.create_work_item("Backup health", "Verify backup health and recovery integrity")
+        plan = service.plan_for_request(backup_health["id"])
+        self.assertIn("backup.verify", plan["actions"])
+        self.assertNotIn("health.status", plan["actions"])
+        service.close()
+
+    def test_health_status_action_executes_readonly_projection(self):
+        service = OperationsService()
+        item = service.create_work_item("Health action", "Show runtime health status")
+        plan = service.plan_for_request(item["id"])
+        self.assertIn("health.status", plan["actions"])
+        service.approve_plan(plan["id"])
+        done = service.execute_plan(plan["id"])
+        captured = next(entry["result"] for entry in done["results"] if entry["action"] == "health.status")
+        self.assertEqual(captured["status"], "ok")
+        self.assertIn("backup_count", captured)
+        self.assertFalse(captured["backup_retention"]["configured"])
         service.close()
 
     def test_work_item_input_is_bounded_and_text_only(self):
