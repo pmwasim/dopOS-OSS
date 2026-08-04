@@ -44,4 +44,10 @@ class OperationsServiceTests(unittest.TestCase):
         result=service.execute_plan(plan["id"])["results"][0]["result"]
         self.assertIn("available", result); service.close()
 
+    def test_github_adapter_is_allowlisted_and_structured(self):
+        service=OperationsService(); item=service.create_work_item("GitHub", "read repository metadata")
+        plan=service.propose_plan(item["id"], ["github.status"]); service.approve_plan(plan["id"])
+        result=service.execute_plan(plan["id"])["results"][0]["result"]
+        self.assertIn("available", result); service.close()
+
 import sqlite3

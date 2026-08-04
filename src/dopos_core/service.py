@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status"}
+SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status"}
 
 def synchronized(method):
     def wrapped(self, *args, **kwargs):
@@ -102,6 +102,7 @@ class OperationsService:
             if action == "status.summary": results.append({"action": action, "result": self.status_summary()})
             elif action == "diary.preview": results.append({"action": action, "result": self.diary(limit=5)})
             elif action == "docker.status": results.append({"action": action, "result": self.docker_status()})
+            elif action == "github.status": results.append({"action": action, "result": self.github_status()})
             else: raise ValueError("action is not safe")
         self.db.execute("UPDATE plans SET state=? WHERE id=?", ("completed", plan_id)); self.db.commit()
         result={"id":plan_id,"state":"completed","results":results}; self.audit("plan.executed", result); return result
@@ -119,6 +120,18 @@ class OperationsService:
             result = subprocess.run([executable, "ps", "--format", "{{.Names}}\t{{.Status}}"], text=True, capture_output=True, timeout=10, check=False)
         except subprocess.TimeoutExpired: return {"available": True, "ok": False, "reason": "docker status timed out"}
         return {"available": True, "ok": result.returncode == 0, "containers": result.stdout[:12000], "error": result.stderr[:2000]}
+
+    @synchronized
+    def github_status(self) -> dict[str, Any]:
+        """Read-only GitHub metadata for the repository containing this process."""
+        executable = shutil.which("gh")
+        if not executable: return {"available": False, "reason": "GitHub CLI executable not found"}
+        try:
+            result = subprocess.run([executable, "repo", "view", "--json", "nameWithOwner,defaultBranchRef,isPrivate,url"], text=True, capture_output=True, timeout=10, check=False)
+        except subprocess.TimeoutExpired: return {"available": True, "ok": False, "reason": "GitHub status timed out"}
+        if result.returncode != 0: return {"available": True, "ok": False, "error": result.stderr[:2000]}
+        try: return {"available": True, "ok": True, "repository": json.loads(result.stdout)}
+        except json.JSONDecodeError: return {"available": True, "ok": False, "error": "GitHub CLI returned invalid JSON"}
 
     @synchronized
     def diary(self, limit: int = 25) -> list[dict[str, Any]]:
