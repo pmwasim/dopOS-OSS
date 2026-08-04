@@ -32,9 +32,10 @@ repository. Start with the [vision](docs/VISION.md), [mission](docs/MISSION.md),
 
 ## Licensing
 
-The project is public but the final open-source licence has not been selected.
-Do not contribute production code until the licence decision in
-[LICENSE-DECISION.md](docs/LICENSE-DECISION.md) is resolved.
+This repository is licensed under [Apache-2.0](LICENSE). The Apache licence
+does not grant rights to dopOS names, marks, or any proprietary dopOS-CSS
+material. See [the licence decision](docs/LICENSE-DECISION.md) and
+[NOTICE](NOTICE) for the public-project baseline.
 # dopOS-OSS
 
 ## Local core quick start

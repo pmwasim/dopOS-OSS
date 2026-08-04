@@ -12,6 +12,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - run: python3 scripts/compile_source.py --root src
       - run: python3 scripts/validate_companyos.py --repo .
       - run: python3 -m unittest discover -s tests -v
       - run: python3 scripts/autonomous_saas_loop.py --repo . --title "CI safe engineering cycle"
