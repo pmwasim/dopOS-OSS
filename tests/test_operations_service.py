@@ -125,6 +125,18 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertNotIn("commands", status["cycles"][0]); self.assertNotIn("secret output", str(status))
             service.close()
 
+    def test_autonomous_work_queue_exposes_only_ordered_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "020-second.md").write_text("# Second item\n\nDo not expose this body.")
+            (root / "010-first.md").write_text("# First item\n\nDo not expose this body.")
+            (root / "ignore.txt").write_text("not a work item")
+            service = OperationsService(); service.inbox_directory = root
+            queue = service.autonomous_work_queue()
+            self.assertEqual(queue["count"], 2)
+            self.assertEqual([item["title"] for item in queue["items"]], ["First item", "Second item"])
+            self.assertNotIn("Do not expose", str(queue)); service.close()
+
     def test_backup_restores_auditable_state(self):
         with tempfile.TemporaryDirectory() as directory:
             service=OperationsService(); service.create_work_item("Backup", "prove recovery path")

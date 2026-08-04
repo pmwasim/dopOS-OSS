@@ -20,6 +20,7 @@ MAX_WORK_ITEM_TITLE = 160
 MAX_WORK_ITEM_REQUEST = 8_000
 MAX_WORKSPACE_QUERY = 160
 MAX_LOOP_REPORT_BYTES = 256_000
+MAX_WORK_ITEM_HEADER_BYTES = 4_096
 
 def synchronized(method):
     def wrapped(self, *args, **kwargs):
@@ -34,6 +35,7 @@ class OperationsService:
         self.backup_directory = Path(os.environ.get("DOPOS_BACKUP_DIR", self.project_root / "workspace/generated/backups"))
         self.workspace_directory = Path(os.environ.get("DOPOS_WORKSPACE_DIR", self.project_root / "workspace/documents"))
         self.loop_directory = Path(os.environ.get("DOPOS_LOOP_EVIDENCE_DIR", self.project_root / "workspace/generated/autonomous-loop"))
+        self.inbox_directory = Path(os.environ.get("DOPOS_INBOX_DIR", self.project_root / "workspace/inbox"))
         self.db = sqlite3.connect(database, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript("""
@@ -337,6 +339,27 @@ class OperationsService:
             except (OSError, json.JSONDecodeError, TypeError, ValueError):
                 continue
         return {"available": True, "configured": True, "cycles": cycles, "count": len(cycles), "message": "Autonomous-loop evidence summaries are read-only."}
+
+    @synchronized
+    def autonomous_work_queue(self, limit: int = 20) -> dict[str, Any]:
+        """List the runner's Markdown candidates without reading work-item bodies."""
+        root = self.inbox_directory
+        if not root.is_dir():
+            return {"available": True, "configured": False, "items": [], "count": 0, "message": "No local autonomous-work inbox has been created yet."}
+        items = []
+        for path in sorted(root.glob("*.md")):
+            if len(items) >= max(1, min(limit, 50)):
+                break
+            try:
+                if path.name == ".gitkeep" or not path.is_file() or path.is_symlink() or path.stat().st_size > MAX_WORK_ITEM_REQUEST:
+                    continue
+                with path.open("r", encoding="utf-8", errors="replace") as source:
+                    header = source.read(MAX_WORK_ITEM_HEADER_BYTES)
+                title = next((line[2:].strip() for line in header.splitlines() if line.startswith("# ")), path.stem.replace("-", " "))
+                items.append({"path": str(path.relative_to(root)), "title": self.display_text(title, 160), "modified_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()})
+            except (OSError, ValueError):
+                continue
+        return {"available": True, "configured": True, "items": items, "count": len(items), "message": "Queued work is listed by filename and title only; the oldest name is selected by the runner."}
 
     @synchronized
     def workspace_status(self, query: str = "", limit: int = 100) -> dict[str, Any]:
