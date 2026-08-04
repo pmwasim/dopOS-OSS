@@ -83,6 +83,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(backups["backups"], [])
         self.assertFalse(backups["retention"]["configured"])
         self.assertFalse(backups["retention"]["prune_enabled"])
+        self.assertIn("retention remains unset", backups["message"])
         item=self.request("/work-items", {"title":"Test","request":"Check Docker status"}); plan=self.request("/plans/from-request", {"work_item_id":item["id"]})
         self.assertEqual(self.request("/work-items")[0]["id"], item["id"])
         self.assertEqual(self.request(f"/work-items/{item['id']}")["plan"]["id"], plan["id"])
