@@ -103,6 +103,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('id="today"', page)
         self.assertIn('id="workspace-results"', page)
         self.assertIn('id="recent"', page)
+        self.assertIn('id="workspace-query"', page)
         self.assertIn('<strong>Goal</strong>', page)
         self.assertIn('<strong>Plan</strong>', page)
         self.assertIn('<strong>Build</strong>', page)
