@@ -99,6 +99,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('id="clock"', page)
         self.assertIn('id="thread"', page)
         self.assertIn('id="request"', page)
+        self.assertIn('id="diary"', page)
         self.assertIn('<strong>Goal</strong>', page)
         self.assertIn('<strong>Plan</strong>', page)
         self.assertIn('<strong>Build</strong>', page)
