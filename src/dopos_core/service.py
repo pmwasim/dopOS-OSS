@@ -295,6 +295,9 @@ class OperationsService:
         """).fetchall()
         entries = [{"work_item_id": row["id"], "title": self.display_text(row["title"], 160), "plan_id": row["plan_id"], "state": row["plan_state"]} for row in rows]
         backups = self.backup_inventory(limit=1)
+        queue = self.autonomous_work_queue(limit=1)
+        loop = self.autonomous_loop_status(limit=1)
+        latest = loop["cycles"][0] if loop.get("cycles") else None
         return {
             "generated_at": self.now(),
             "needs_decision": [entry for entry in entries if entry["state"] == "awaiting_approval"],
@@ -304,6 +307,16 @@ class OperationsService:
                 "audit_chain_valid": self.verify_audit_chain(),
                 "backup_count": len(self.backup_inventory(limit=100)),
                 "latest_backup": backups[0] if backups else None,
+            },
+            "queue": {
+                "configured": queue.get("configured", False),
+                "count": queue.get("count", 0),
+                "next_title": queue["items"][0]["title"] if queue.get("items") else None,
+            },
+            "automation": {
+                "configured": loop.get("configured", False),
+                "latest_result": latest.get("result") if latest else None,
+                "latest_title": latest.get("title") if latest else None,
             },
         }
 

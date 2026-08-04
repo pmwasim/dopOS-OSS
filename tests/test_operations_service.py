@@ -47,6 +47,8 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertEqual(today["needs_decision"][0]["plan_id"], plan["id"])
             self.assertTrue(today["recovery"]["audit_chain_valid"])
             self.assertEqual(today["recovery"]["backup_count"], 1)
+            self.assertIn("queue", today)
+            self.assertIn("automation", today)
             service.close()
 
     def test_today_projects_approved_plans_as_ready_to_run(self):
@@ -58,6 +60,24 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(today["in_motion"][0]["work_item_id"], item["id"])
         self.assertEqual(today["in_motion"][0]["plan_id"], plan["id"])
         service.close()
+
+    def test_today_includes_metadata_only_queue_and_automation_summary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            inbox = Path(directory) / "inbox"
+            evidence = Path(directory) / "loop"
+            inbox.mkdir(); evidence.mkdir()
+            (inbox / "010-next.md").write_text("# Queue next item\n\nSecret body must stay out of Today.")
+            run = evidence / "20260804T120000Z"; run.mkdir()
+            (run / "report.json").write_text('{"title":"Cycle A","result":"passed","started_at":"2026-08-04T12:00:00+00:00","completed_at":"2026-08-04T12:01:00+00:00","phases":[{"name":"test","result":"passed"}],"commands":["secret output"]}')
+            service=OperationsService(); service.inbox_directory=inbox; service.loop_directory=evidence
+            today=service.today()
+            self.assertEqual(today["queue"]["count"], 1)
+            self.assertEqual(today["queue"]["next_title"], "Queue next item")
+            self.assertEqual(today["automation"]["latest_result"], "passed")
+            self.assertEqual(today["automation"]["latest_title"], "Cycle A")
+            self.assertNotIn("Secret body", str(today))
+            self.assertNotIn("secret output", str(today))
+            service.close()
 
     def test_recent_work_sanitizes_legacy_terminal_control_codes(self):
         service=OperationsService(); item=service.create_work_item("Legacy", "Show Docker status")
