@@ -200,6 +200,15 @@ class OperationsServiceTests(unittest.TestCase):
         result=service.execute_plan(plan["id"])["results"][0]["result"]
         self.assertIn("available", result); service.close()
 
+    def test_ci_adapter_uses_fixed_bounded_github_actions_command(self):
+        service=OperationsService()
+        with patch("dopos_core.service.shutil.which", return_value="gh"), patch("dopos_core.service.subprocess.run") as run:
+            run.return_value=type("Result", (), {"returncode":0,"stdout":"[{\"status\":\"completed\",\"conclusion\":\"success\",\"workflowName\":\"CI\",\"headSha\":\"abcdef123\",\"createdAt\":\"now\",\"updatedAt\":\"now\",\"url\":\"https://example.test/run\"}]","stderr":""})()
+            result=service.ci_status()
+        self.assertTrue(result["ok"]); self.assertEqual(result["runs"][0]["workflowName"], "CI")
+        self.assertEqual(run.call_args.args[0], ["gh", "run", "list", "--limit", "5", "--json", "status,conclusion,workflowName,headSha,createdAt,updatedAt,url"])
+        service.close()
+
     def test_request_router_stays_within_allowlist(self):
         service=OperationsService(); item=service.create_work_item("Route", "Show Docker and GitHub repository status")
         plan=service.plan_for_request(item["id"])
@@ -218,7 +227,13 @@ class OperationsServiceTests(unittest.TestCase):
         service=OperationsService(); item=service.create_work_item("Quality", "Run CI tests and validate build")
         with patch.object(service, "local_plan_explanation", return_value="Safe quality plan"):
             plan=service.plan_for_request(item["id"])
-        self.assertEqual(plan["actions"], ["status.summary", "quality.status", "diary.preview"]); service.close()
+        self.assertEqual(plan["actions"], ["status.summary", "ci.status", "quality.status", "diary.preview"]); service.close()
+
+    def test_request_router_adds_read_only_ci_status(self):
+        service=OperationsService(); item=service.create_work_item("CI", "Show CI workflow status")
+        with patch.object(service, "local_plan_explanation", return_value="Safe CI plan"):
+            plan=service.plan_for_request(item["id"])
+        self.assertEqual(plan["actions"], ["status.summary", "ci.status", "diary.preview"]); service.close()
 
     def test_ollama_adapter_is_allowlisted_and_routed(self):
         service=OperationsService(); item=service.create_work_item("Models", "Show local Ollama model status")

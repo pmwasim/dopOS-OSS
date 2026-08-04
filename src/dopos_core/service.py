@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ollama.status", "quality.status", "backup.create", "backup.verify", "workspace.status", "workspace.snapshot"}
+SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ci.status", "ollama.status", "quality.status", "backup.create", "backup.verify", "workspace.status", "workspace.snapshot"}
 MAX_WORK_ITEM_TITLE = 160
 MAX_WORK_ITEM_REQUEST = 8_000
 MAX_WORKSPACE_QUERY = 160
@@ -173,8 +173,10 @@ class OperationsService:
         request = row["request"].lower(); actions=["status.summary"]
         if "docker" in request or "container" in request: actions.append("docker.status")
         if "github" in request or "repository" in request or "repo" in request: actions.append("github.status")
+        if re.search(r"\bci\b", request) or any(phrase in request for phrase in ("github actions", "workflow", "pipeline")):
+            actions.append("ci.status")
         if "ollama" in request or "model" in request or "ai runtime" in request: actions.append("ollama.status")
-        if any(word in request for word in ("test", "build", "ci", "validate", "quality")): actions.append("quality.status")
+        if any(word in request for word in ("test", "build", "validate", "quality")): actions.append("quality.status")
         if any(word in request for word in ("workspace", "document", "documents", "folder", "folders", "file", "files")):
             actions.append("workspace.status")
         if any(word in request for word in ("workspace snapshot", "document snapshot", "workspace version", "document version", "catalog revision")):
@@ -250,6 +252,7 @@ class OperationsService:
             elif action == "diary.preview": results.append({"action": action, "result": self.diary_preview(limit=5)})
             elif action == "docker.status": results.append({"action": action, "result": self.docker_status()})
             elif action == "github.status": results.append({"action": action, "result": self.github_status()})
+            elif action == "ci.status": results.append({"action": action, "result": self.ci_status()})
             elif action == "ollama.status": results.append({"action": action, "result": self.ollama_status()})
             elif action == "quality.status": results.append({"action": action, "result": self.quality_status()})
             elif action == "backup.create": results.append({"action": action, "result": self.create_backup()})
@@ -438,6 +441,32 @@ class OperationsService:
         if result.returncode != 0: return {"available": True, "ok": False, "error": result.stderr[:2000]}
         try: return {"available": True, "ok": True, "repository": json.loads(result.stdout)}
         except json.JSONDecodeError: return {"available": True, "ok": False, "error": "GitHub CLI returned invalid JSON"}
+
+    @synchronized
+    def ci_status(self) -> dict[str, Any]:
+        """Read the latest GitHub Actions results with a fixed, bounded query."""
+        executable = shutil.which("gh")
+        if not executable:
+            return {"available": False, "reason": "GitHub CLI executable not found"}
+        command = [executable, "run", "list", "--limit", "5", "--json", "status,conclusion,workflowName,headSha,createdAt,updatedAt,url"]
+        try:
+            result = subprocess.run(command, cwd=self.project_root, text=True, capture_output=True, timeout=15, check=False)
+        except subprocess.TimeoutExpired:
+            return {"available": True, "ok": False, "reason": "CI status timed out"}
+        if result.returncode != 0:
+            return {"available": True, "ok": False, "error": result.stderr[:2000]}
+        try:
+            payload = json.loads(result.stdout)
+            if not isinstance(payload, list):
+                raise ValueError("expected a list")
+            runs = []
+            for run in payload[:5]:
+                if not isinstance(run, dict):
+                    continue
+                runs.append({key: self.display_text(str(run.get(key, "")), 240) for key in ("status", "conclusion", "workflowName", "headSha", "createdAt", "updatedAt", "url")})
+            return {"available": True, "ok": True, "runs": runs}
+        except (json.JSONDecodeError, ValueError, TypeError):
+            return {"available": True, "ok": False, "error": "GitHub CLI returned invalid CI status JSON"}
 
     @synchronized
     def ollama_status(self) -> dict[str, Any]:
