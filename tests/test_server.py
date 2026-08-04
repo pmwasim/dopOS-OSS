@@ -68,6 +68,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Export still downloads the current journal projection.", page)
         self.assertGreaterEqual(page.count("Export still downloads the current journal projection."), 2)
         self.assertIn("Find a file or folder", page)
+        self.assertIn("Search stays local and reads names only.", page)
         self.assertIn("searchWorkspace", page)
         self.assertIn("loadWorkspace", page)
         self.assertGreaterEqual(page.count("loadWorkspace()"), 3)
