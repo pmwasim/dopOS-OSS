@@ -30,16 +30,13 @@ def bounded(value: str) -> str:
     return value[-MAX_OUTPUT:]
 
 
-def command_label(command: Any) -> str:
-    return command if isinstance(command, str) else " ".join(command)
+def command_label(command: list[str]) -> str:
+    return " ".join(command)
 
 
-def run(command: Any, repo: Path) -> dict[str, Any]:
+def run(command: list[str], repo: Path) -> dict[str, Any]:
     started = monotonic()
-    if isinstance(command, str):
-        result = subprocess.run(command, cwd=repo, shell=True, text=True, capture_output=True)
-    else:
-        result = subprocess.run(command, cwd=repo, text=True, capture_output=True)
+    result = subprocess.run(command, cwd=repo, text=True, capture_output=True)
     return {
         "command": command_label(command),
         "returncode": result.returncode,
@@ -60,6 +57,18 @@ def load_config(repo: Path) -> dict[str, Any]:
     for name, commands in config["phases"].items():
         if not isinstance(commands, list):
             raise ValueError(f"Phase {name!r} must be a command list.")
+        for command in commands:
+            if not isinstance(command, list) or not command or not all(isinstance(argument, str) and argument for argument in command):
+                raise ValueError(f"Phase {name!r} commands must be non-empty argument lists; shell strings are not supported.")
+    release = config.get("release", {})
+    if release and not isinstance(release, dict):
+        raise ValueError("Release config must be an object.")
+    release_commands = release.get("commands", [])
+    if not isinstance(release_commands, list):
+        raise ValueError("Release commands must be a command list.")
+    for command in release_commands:
+        if not isinstance(command, list) or not command or not all(isinstance(argument, str) and argument for argument in command):
+            raise ValueError("Release commands must be non-empty argument lists; shell strings are not supported.")
     if "recover" not in config["phases"]:
         raise ValueError("Loop config requires a recover phase.")
     return config
@@ -84,7 +93,7 @@ def select_work_item(repo: Path, explicit: str | None) -> dict[str, str] | None:
     return {"path": str(item.relative_to(repo)), "title": item.stem.replace("-", " ")}
 
 
-def phase_result(name: str, commands: list[Any], repo: Path) -> dict[str, Any]:
+def phase_result(name: str, commands: list[list[str]], repo: Path) -> dict[str, Any]:
     entries = [run(command, repo) for command in commands]
     return {
         "name": name,

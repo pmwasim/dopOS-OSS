@@ -36,7 +36,7 @@ On any failed build, test, or verification step, the loop enters `recover`: it p
 
 ## Operating model
 
-The repository-controlled `.companyos/autonomous-loop.json` specifies local commands. `scripts/autonomous_saas_loop.py` selects the oldest Markdown work item in `workspace/inbox/` (or accepts `--work-item`), runs the selected phases, creates timestamped schema-versioned JSON evidence under `workspace/generated/autonomous-loop/`, and writes a concise Markdown journal. An operator or permitted agent can then use the evidence to continue work safely.
+The repository-controlled `.companyos/autonomous-loop.json` specifies local commands as explicit argument lists, never shell strings. `scripts/autonomous_saas_loop.py` selects the oldest Markdown work item in `workspace/inbox/` (or accepts `--work-item`), runs the selected phases, creates timestamped schema-versioned JSON evidence under `workspace/generated/autonomous-loop/`, and writes a concise Markdown journal. An operator or permitted agent can then use the evidence to continue work safely.
 
 The runner supports `--dry-run` for workflow review without execution. Empty `plan`, `implement`, and `package` phases are deliberate: the project owner must supply project-specific commands or an approved agent adapter, rather than having generic automation guess code changes or production actions.
 
