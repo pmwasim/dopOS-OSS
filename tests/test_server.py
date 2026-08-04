@@ -17,6 +17,6 @@ class ServerTests(unittest.TestCase):
         return json.loads(urlopen(req).read())
     def test_local_ui_and_approval_flow(self):
         self.assertIn("local operations", urlopen(self.url).read().decode())
-        item=self.request("/work-items", {"title":"Test","request":"Check status"}); plan=self.request("/plans", {"work_item_id":item["id"],"actions":["status.summary"]})
+        item=self.request("/work-items", {"title":"Test","request":"Check Docker status"}); plan=self.request("/plans/from-request", {"work_item_id":item["id"]})
         self.request(f"/plans/{plan['id']}/approve", {}); done=self.request(f"/plans/{plan['id']}/execute", {})
         self.assertEqual(done["state"], "completed"); self.assertGreaterEqual(len(self.request("/diary")), 4)

@@ -50,4 +50,10 @@ class OperationsServiceTests(unittest.TestCase):
         result=service.execute_plan(plan["id"])["results"][0]["result"]
         self.assertIn("available", result); service.close()
 
+    def test_request_router_stays_within_allowlist(self):
+        service=OperationsService(); item=service.create_work_item("Route", "Show Docker and GitHub repository status")
+        plan=service.plan_for_request(item["id"])
+        self.assertEqual(plan["actions"], ["status.summary", "docker.status", "github.status", "diary.preview"])
+        service.close()
+
 import sqlite3

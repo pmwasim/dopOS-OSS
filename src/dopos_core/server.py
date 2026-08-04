@@ -22,6 +22,7 @@ class Handler(BaseHTTPRequestHandler):
             data=self.body()
             if self.path == "/work-items": return self.reply(201, self.service.create_work_item(data["title"], data["request"]))
             if self.path == "/plans": return self.reply(201, self.service.propose_plan(data["work_item_id"], data["actions"]))
+            if self.path == "/plans/from-request": return self.reply(201, self.service.plan_for_request(data["work_item_id"]))
             if self.path.startswith("/plans/") and self.path.endswith("/approve"): return self.reply(200, self.service.approve_plan(int(self.path.split("/")[2])))
             if self.path.startswith("/plans/") and self.path.endswith("/reject"): return self.reply(200, self.service.reject_plan(int(self.path.split("/")[2])))
             if self.path.startswith("/plans/") and self.path.endswith("/execute"): return self.reply(200, self.service.execute_plan(int(self.path.split("/")[2])))

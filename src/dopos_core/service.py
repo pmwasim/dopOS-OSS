@@ -67,6 +67,19 @@ class OperationsService:
         plan={"id":cursor.lastrowid,"work_item_id":work_item_id,"actions":actions,"state":"awaiting_approval","created_at":now}; self.audit("plan.proposed", plan); return plan
 
     @synchronized
+    def plan_for_request(self, work_item_id: int) -> dict[str, Any]:
+        """Deterministic local planner; it never expands beyond the safe allowlist."""
+        row = self.db.execute("SELECT request FROM work_items WHERE id=?", (work_item_id,)).fetchone()
+        if not row: raise ValueError("work item not found")
+        request = row["request"].lower(); actions=["status.summary"]
+        if "docker" in request or "container" in request: actions.append("docker.status")
+        if "github" in request or "repository" in request or "repo" in request: actions.append("github.status")
+        actions.append("diary.preview")
+        plan=self.propose_plan(work_item_id, actions)
+        self.audit("plan.routed", {"plan_id":plan["id"],"method":"deterministic-safe-router","actions":actions})
+        return plan
+
+    @synchronized
     def approve_plan(self, plan_id: int) -> dict[str, Any]:
         row=self.db.execute("SELECT * FROM plans WHERE id=?", (plan_id,)).fetchone()
         if not row: raise ValueError("plan not found")
