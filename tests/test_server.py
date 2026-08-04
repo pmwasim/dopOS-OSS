@@ -179,6 +179,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("backups ·", page)
         self.assertIn("rev ·", page)
         self.assertIn("Local tools", page)
+        self.assertIn("const labels = {docker:'Docker', github:'GitHub', ci:'CI', ollama:'Local AI'}", page)
         self.assertIn("available", page)
         self.assertIn("unavailable", page)
         self.assertIn("does not change execution", page)
