@@ -270,6 +270,7 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertEqual(empty["count"], 0)
             self.assertEqual(empty["backups"], [])
             self.assertFalse(empty["retention"]["configured"])
+            self.assertIn("retention remains unset", empty["message"])
             service.create_backup()
             status=service.backups_status()
             self.assertEqual(status["count"], 1)
