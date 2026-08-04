@@ -267,6 +267,7 @@ class OperationsServiceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             service=OperationsService(); service.backup_directory=Path(directory)
             empty=service.backups_status()
+            self.assertTrue(empty["available"])
             self.assertEqual(empty["count"], 0)
             self.assertEqual(empty["backups"], [])
             self.assertFalse(empty["retention"]["configured"])
