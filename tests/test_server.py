@@ -29,6 +29,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(too_long.exception.code, 400)
         too_long.exception.close()
         page = urlopen(self.url).read().decode()
+        self.assertIn("Execute approved plan", page)
         self.assertIn("Ask dopOS anything", page)
         self.assertIn("Live Work", page)
         self.assertIn("Diary", page)

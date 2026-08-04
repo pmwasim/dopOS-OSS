@@ -49,6 +49,16 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertEqual(today["recovery"]["backup_count"], 1)
             service.close()
 
+    def test_today_projects_approved_plans_as_ready_to_run(self):
+        service=OperationsService(); item=service.create_work_item("Resume", "Show safe status")
+        plan=service.propose_plan(item["id"], ["status.summary"])
+        service.approve_plan(plan["id"])
+        today=service.today()
+        self.assertEqual(today["needs_decision"], [])
+        self.assertEqual(today["in_motion"][0]["work_item_id"], item["id"])
+        self.assertEqual(today["in_motion"][0]["plan_id"], plan["id"])
+        service.close()
+
     def test_recent_work_sanitizes_legacy_terminal_control_codes(self):
         service=OperationsService(); item=service.create_work_item("Legacy", "Show Docker status")
         service.propose_plan(item["id"], ["status.summary"], "Thinking...\x1b[1D\x1b[K ...done thinking. Safe explanation")
