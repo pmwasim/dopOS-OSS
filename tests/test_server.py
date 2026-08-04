@@ -68,6 +68,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Find a file or folder", page)
         self.assertIn("searchWorkspace", page)
         self.assertIn("loadWorkspace", page)
+        self.assertGreaterEqual(page.count("loadWorkspace()"), 3)
         self.assertIn("Workspace inventory is unavailable.", page)
         self.assertIn("loadDiary()", page)
         self.assertIn("loadRecent", page)
