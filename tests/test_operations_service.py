@@ -105,6 +105,16 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_request_router_adds_backup_create_for_plain_backup(self):
+        service=OperationsService()
+        item=service.create_work_item("Backup", "Create a local backup")
+        plan=service.plan_for_request(item["id"])
+        self.assertIn("backup.create", plan["actions"])
+        self.assertNotIn("backup.verify", plan["actions"])
+        self.assertNotIn("backup.retention", plan["actions"])
+        service.close()
+
     def test_request_router_starts_with_status_summary(self):
         service=OperationsService()
         item=service.create_work_item("Start", "Show Docker and GitHub repository status")
