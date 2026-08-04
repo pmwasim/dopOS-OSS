@@ -191,6 +191,7 @@ class OperationsServiceTests(unittest.TestCase):
 
     def test_safe_actions_include_loop_queue_and_retention_adapters(self):
         from dopos_core.service import SAFE_ACTIONS
+        self.assertGreaterEqual(len(SAFE_ACTIONS), 13)
         for action in ("loop.status", "queue.status", "backup.retention", "ci.status", "workspace.snapshot"):
             self.assertIn(action, SAFE_ACTIONS)
 
