@@ -90,6 +90,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn('Host records', page)
         self.assertIn('Workspace inventory', page)
         self.assertIn('Names and paths only.', page)
+        self.assertIn('Workspace snapshot', page)
+        self.assertIn('catalog rev ·', page)
         self.assertIn('Autonomous loop', page)
         self.assertIn('Autonomous queue', page)
         self.assertIn('Local backup created', page)
