@@ -21,6 +21,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(health["status"], "ok")
         self.assertTrue(health["audit_chain_valid"])
         self.assertIn("records", health)
+        today = self.request("/today")
+        self.assertEqual(today["needs_decision"], [])
+        self.assertTrue(today["recovery"]["audit_chain_valid"])
         with self.assertRaises(HTTPError) as too_long:
             self.request("/work-items", {"title":"x" * 161, "request":"safe request"})
         self.assertEqual(too_long.exception.code, 400)

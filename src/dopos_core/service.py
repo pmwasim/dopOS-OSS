@@ -267,6 +267,32 @@ class OperationsService:
         }
 
     @synchronized
+    def today(self) -> dict[str, Any]:
+        """A local-first Home projection made only from durable operational state."""
+        rows = self.db.execute("""
+            SELECT w.id, w.title, p.id AS plan_id, p.state AS plan_state
+            FROM work_items AS w
+            LEFT JOIN plans AS p ON p.id = (
+                SELECT id FROM plans WHERE work_item_id=w.id ORDER BY id DESC LIMIT 1
+            )
+            WHERE p.state IN ('awaiting_approval', 'approved')
+            ORDER BY w.id DESC LIMIT 12
+        """).fetchall()
+        entries = [{"work_item_id": row["id"], "title": self.display_text(row["title"], 160), "plan_id": row["plan_id"], "state": row["plan_state"]} for row in rows]
+        backups = self.backup_inventory(limit=1)
+        return {
+            "generated_at": self.now(),
+            "needs_decision": [entry for entry in entries if entry["state"] == "awaiting_approval"],
+            "in_motion": [entry for entry in entries if entry["state"] == "approved"],
+            "recent_activity": self.journal(limit=5),
+            "recovery": {
+                "audit_chain_valid": self.verify_audit_chain(),
+                "backup_count": len(self.backup_inventory(limit=100)),
+                "latest_backup": backups[0] if backups else None,
+            },
+        }
+
+    @synchronized
     def tool_status(self) -> dict[str, dict[str, Any]]:
         """Read-only availability snapshot for the local control-room header."""
         return {

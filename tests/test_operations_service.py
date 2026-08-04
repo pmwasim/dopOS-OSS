@@ -36,6 +36,19 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(service.work_item(item["id"])["plan"]["state"], "awaiting_approval")
         self.assertEqual(service.work_item(item["id"])["state"], "awaiting_approval"); service.close()
 
+    def test_today_projects_pending_decisions_and_recovery_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            service=OperationsService(); service.backup_directory=Path(directory)
+            item=service.create_work_item("Today", "Show Docker status")
+            plan=service.plan_for_request(item["id"])
+            service.create_backup()
+            today=service.today()
+            self.assertEqual(today["needs_decision"][0]["work_item_id"], item["id"])
+            self.assertEqual(today["needs_decision"][0]["plan_id"], plan["id"])
+            self.assertTrue(today["recovery"]["audit_chain_valid"])
+            self.assertEqual(today["recovery"]["backup_count"], 1)
+            service.close()
+
     def test_recent_work_sanitizes_legacy_terminal_control_codes(self):
         service=OperationsService(); item=service.create_work_item("Legacy", "Show Docker status")
         service.propose_plan(item["id"], ["status.summary"], "Thinking...\x1b[1D\x1b[K ...done thinking. Safe explanation")
