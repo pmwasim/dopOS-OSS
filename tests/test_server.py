@@ -83,6 +83,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Workspace is ready and empty.", page)
         self.assertIn("Local workspace directory has not been created yet.", page)
         self.assertIn("api('/today')", page)
+        self.assertIn("Stop control enabled", page)
+        self.assertGreaterEqual(page.count("loadToday()"), 2)
         self.assertIn("state.queue", page)
         self.assertIn("no queued work", page)
         self.assertIn("inbox not configured", page)
