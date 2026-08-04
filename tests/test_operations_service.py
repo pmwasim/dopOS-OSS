@@ -129,7 +129,10 @@ class OperationsServiceTests(unittest.TestCase):
             found=service.workspace_status("projects/proposal")
             self.assertEqual(found["query"], "projects/proposal")
             self.assertEqual([entry["path"] for entry in found["documents"]], ["Projects/proposal.md"])
-            self.assertEqual([entry["path"] for entry in found["folders"]], ["Projects"])
+            self.assertEqual(found["folders"], [])
+            by_folder=service.workspace_status("Projects")
+            self.assertEqual([entry["path"] for entry in by_folder["folders"]], ["Projects"])
+            self.assertEqual([entry["path"] for entry in by_folder["documents"]], ["Projects/proposal.md"])
             with self.assertRaisesRegex(ValueError, "at most 160"):
                 service.workspace_status("x" * 161)
             snapshot = service.workspace_snapshot()
