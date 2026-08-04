@@ -171,6 +171,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Safety control", page)
         self.assertIn("· execution ready", page)
         self.assertIn("Updated ", page)
+        self.assertIn("Updated ${escape(result.updated_at)}", page)
         self.assertIn("Runtime health", page)
         self.assertIn("folders ·", page)
         self.assertIn("queue ·", page)
