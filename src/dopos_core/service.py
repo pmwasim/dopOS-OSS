@@ -279,12 +279,23 @@ class OperationsService:
         """Read-only runtime health suitable for a local monitor or service probe."""
         summary = self.status_summary()
         audit_chain_valid = self.verify_audit_chain()
+        workspace = self.workspace_status(limit=1)
+        retention = self.backup_retention_status()
         return {
             "status": "ok" if audit_chain_valid else "degraded",
             "core": "dopos",
             "audit_chain_valid": audit_chain_valid,
             "execution_paused": self.kill_switch_enabled(),
             "records": summary,
+            "workspace": {
+                "configured": workspace.get("configured", False),
+                "document_count": workspace.get("count", 0),
+                "folder_count": workspace.get("folder_count", 0),
+            },
+            "backup_retention": {
+                "configured": retention["configured"],
+                "prune_enabled": retention["prune_enabled"],
+            },
         }
 
     @synchronized

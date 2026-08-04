@@ -109,6 +109,10 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertTrue(health["audit_chain_valid"])
         self.assertFalse(health["execution_paused"])
         self.assertEqual(health["records"]["work_items"], 1)
+        self.assertTrue(health["workspace"]["configured"])
+        self.assertEqual(health["workspace"]["document_count"], 0)
+        self.assertFalse(health["backup_retention"]["configured"])
+        self.assertFalse(health["backup_retention"]["prune_enabled"])
         service.close()
 
     def test_work_item_input_is_bounded_and_text_only(self):
