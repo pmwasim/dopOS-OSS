@@ -80,6 +80,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("loadRecent", page)
         self.assertIn("No work yet.", page)
         self.assertIn("folder</small>", page)
+        self.assertIn(' bytes</small>', page)
         self.assertIn("Workspace is ready and empty.", page)
         self.assertIn("Local workspace directory has not been created yet.", page)
         self.assertIn("api('/today')", page)
