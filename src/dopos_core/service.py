@@ -395,30 +395,41 @@ class OperationsService:
         needle = query.strip().casefold()
         root = self.workspace_directory
         if not root.is_dir():
-            return {"available": True, "configured": False, "query": query, "documents": [], "count": 0, "catalog_revision": None, "message": "Local workspace directory has not been created yet."}
+            return {"available": True, "configured": False, "query": query, "documents": [], "folders": [], "count": 0, "folder_count": 0, "catalog_revision": None, "message": "Local workspace directory has not been created yet."}
         allowed_suffixes = {".md", ".txt", ".pdf", ".docx", ".xlsx", ".pptx", ".ods", ".odt", ".odp"}
         documents = []
+        folders = []
         for path in sorted(root.rglob("*")):
-            if len(documents) >= max(1, min(limit, 100)):
-                break
-            if not path.is_file() or path.is_symlink() or path.suffix.lower() not in allowed_suffixes:
-                continue
             try:
-                relative = path.relative_to(root)
-                if needle and needle not in str(relative).casefold():
+                if path.is_symlink():
                     continue
-                documents.append({"path": str(relative), "extension": path.suffix.lower(), "size": path.stat().st_size, "modified_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()})
+                relative = path.relative_to(root)
+                relative_text = str(relative)
+                if needle and needle not in relative_text.casefold():
+                    continue
+                if path.is_dir():
+                    if len(folders) < max(1, min(limit, 100)):
+                        folders.append({"path": relative_text, "modified_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()})
+                    continue
+                if not path.is_file() or path.suffix.lower() not in allowed_suffixes:
+                    continue
+                if len(documents) >= max(1, min(limit, 100)):
+                    continue
+                documents.append({"path": relative_text, "extension": path.suffix.lower(), "size": path.stat().st_size, "modified_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()})
             except (OSError, ValueError):
                 continue
         message = "Local workspace search completed without reading document contents." if needle else "Local workspace inventory completed without reading document contents."
-        revision_input = "\n".join(f"{document['path']}|{document['size']}|{document['modified_at']}" for document in documents)
-        return {"available": True, "configured": True, "query": query, "documents": documents, "count": len(documents), "catalog_revision": hashlib.sha256(revision_input.encode()).hexdigest(), "message": message}
+        revision_input = "\n".join(
+            [f"folder|{folder['path']}|{folder['modified_at']}" for folder in folders]
+            + [f"document|{document['path']}|{document['size']}|{document['modified_at']}" for document in documents]
+        )
+        return {"available": True, "configured": True, "query": query, "documents": documents, "folders": folders, "count": len(documents), "folder_count": len(folders), "catalog_revision": hashlib.sha256(revision_input.encode()).hexdigest(), "message": message}
 
     @synchronized
     def workspace_snapshot(self) -> dict[str, Any]:
         """Capture an approved, metadata-only catalog revision in the audit trail."""
         status = self.workspace_status()
-        return {"available": status["available"], "configured": status["configured"], "document_count": status["count"], "catalog_revision": status["catalog_revision"], "message": "Metadata-only workspace snapshot captured in the approved plan evidence."}
+        return {"available": status["available"], "configured": status["configured"], "document_count": status["count"], "folder_count": status.get("folder_count", 0), "catalog_revision": status["catalog_revision"], "message": "Metadata-only workspace snapshot captured in the approved plan evidence."}
 
     @synchronized
     def quality_status(self) -> dict[str, Any]:

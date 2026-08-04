@@ -123,14 +123,18 @@ class OperationsServiceTests(unittest.TestCase):
             service=OperationsService(); service.workspace_directory=root
             status=service.workspace_status()
             self.assertTrue(status["configured"]); self.assertEqual(status["count"], 2)
+            self.assertEqual(status["folder_count"], 1)
+            self.assertEqual([entry["path"] for entry in status["folders"]], ["Projects"])
             self.assertEqual([entry["path"] for entry in status["documents"]], ["Projects/proposal.md", "readme.txt"])
             found=service.workspace_status("projects/proposal")
             self.assertEqual(found["query"], "projects/proposal")
             self.assertEqual([entry["path"] for entry in found["documents"]], ["Projects/proposal.md"])
+            self.assertEqual([entry["path"] for entry in found["folders"]], ["Projects"])
             with self.assertRaisesRegex(ValueError, "at most 160"):
                 service.workspace_status("x" * 161)
             snapshot = service.workspace_snapshot()
             self.assertEqual(snapshot["document_count"], 2)
+            self.assertEqual(snapshot["folder_count"], 1)
             self.assertTrue(snapshot["catalog_revision"])
             item=service.create_work_item("Workspace", "Show document workspace version snapshot")
             plan=service.plan_for_request(item["id"])
