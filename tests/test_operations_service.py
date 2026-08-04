@@ -28,6 +28,14 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertIn("# dopOS Journal", export); self.assertIn("Started: Journal check", export); self.assertNotIn("payload", export)
         service.close()
 
+    def test_empty_journal_markdown_export_includes_explicit_empty_note(self):
+        service = OperationsService()
+        export = service.journal_markdown()
+        self.assertIn("# dopOS Journal", export)
+        self.assertIn("No journal entries have been recorded yet.", export)
+        self.assertNotIn("payload", export)
+        service.close()
+
     def test_recent_work_is_durable_and_includes_latest_plan(self):
         service=OperationsService(); item=service.create_work_item("History", "Show Docker status")
         plan=service.plan_for_request(item["id"])

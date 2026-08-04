@@ -605,6 +605,8 @@ class OperationsService:
         """Export the bounded local journal without exposing raw audit payloads."""
         entries = self.journal(limit)
         lines = ["# dopOS Journal", "", "A local human-readable projection of the append-only audit ledger."]
+        if not entries:
+            lines += ["", "No journal entries have been recorded yet."]
         for entry in entries:
             lines += ["", f"- **{entry['created_at']}** — {entry['summary']}"]
             if entry["detail"]:
