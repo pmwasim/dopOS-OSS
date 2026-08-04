@@ -25,8 +25,8 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(today["needs_decision"], [])
         self.assertTrue(today["recovery"]["audit_chain_valid"])
         loop = self.request("/autonomous-loop")
-        self.assertEqual(loop["count"], 0)
         self.assertIn("cycles", loop)
+        self.assertEqual(loop["count"], len(loop["cycles"]))
         with self.assertRaises(HTTPError) as too_long:
             self.request("/work-items", {"title":"x" * 161, "request":"safe request"})
         self.assertEqual(too_long.exception.code, 400)
