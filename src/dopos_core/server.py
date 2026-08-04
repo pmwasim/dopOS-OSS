@@ -17,6 +17,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/health": return self.reply(200, {"status":"ok", "core":"dopos"})
         if self.path == "/tools/status": return self.reply(200, self.service.tool_status())
         if self.path == "/controls/kill-switch": return self.reply(200, self.service.control_status())
+        if self.path == "/backups": return self.reply(200, self.service.backup_inventory())
         if self.path == "/work-items": return self.reply(200, self.service.work_items())
         if self.path.startswith("/work-items/"):
             try: return self.reply(200, self.service.work_item(int(self.path.split("/")[2])))

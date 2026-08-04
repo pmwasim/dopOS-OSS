@@ -23,6 +23,7 @@ class ServerTests(unittest.TestCase):
         tools = self.request("/tools/status")
         self.assertEqual(set(tools), {"docker", "github", "ollama"})
         self.assertEqual(self.request("/controls/kill-switch")["kill_switch"], "off")
+        self.assertEqual(self.request("/backups"), [])
         item=self.request("/work-items", {"title":"Test","request":"Check Docker status"}); plan=self.request("/plans/from-request", {"work_item_id":item["id"]})
         self.assertEqual(self.request("/work-items")[0]["id"], item["id"])
         self.assertEqual(self.request(f"/work-items/{item['id']}")["plan"]["id"], plan["id"])

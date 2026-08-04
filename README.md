@@ -45,6 +45,6 @@ The first public implementation slice is a local, dependency-free operations cor
 PYTHONPATH=src python3 -m dopos_core.server --database dopos.db
 ```
 
-Its local API exposes `GET /health`, `GET /diary`, `POST /work-items`, `POST /plans`, `POST /plans/{id}/approve`, and `POST /plans/{id}/execute`. Only the allowlisted read-only actions `status.summary` and `diary.preview` are implemented in this first slice.
+Its local API exposes `GET /health`, `GET /diary`, `POST /work-items`, `POST /plans`, `POST /plans/{id}/approve`, and `POST /plans/{id}/execute`. Requests are deterministically routed only to explicitly allowlisted local actions. Every action is frozen in a plan and requires approval before execution.
 
-The core also verifies its chained audit events and supports an explicit local SQLite backup through `OperationsService.backup_to(...)`. Backup/restore acceptance tests prove recovery of work-item state and audit integrity; backup retention and off-machine storage are not implemented yet.
+The core also verifies its chained audit events and supports an explicit local SQLite backup through `OperationsService.backup_to(...)`. An approved backup request creates a unique database copy in the configured local state directory and records its checksum and audit-chain result. Backup retention, restore, and off-machine storage are not implemented yet.

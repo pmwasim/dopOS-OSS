@@ -9,11 +9,13 @@ import shutil
 import subprocess
 import re
 import sys
+import os
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ollama.status", "quality.status"}
+SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ollama.status", "quality.status", "backup.create"}
 
 def synchronized(method):
     def wrapped(self, *args, **kwargs):
@@ -25,6 +27,7 @@ class OperationsService:
     def __init__(self, database: str | Path = ":memory:"):
         self._lock = threading.RLock()
         self.project_root = Path(__file__).resolve().parents[2]
+        self.backup_directory = Path(os.environ.get("DOPOS_BACKUP_DIR", self.project_root / "workspace/generated/backups"))
         self.db = sqlite3.connect(database, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript("""
@@ -156,6 +159,7 @@ class OperationsService:
         if "github" in request or "repository" in request or "repo" in request: actions.append("github.status")
         if "ollama" in request or "model" in request or "ai runtime" in request: actions.append("ollama.status")
         if any(word in request for word in ("test", "build", "ci", "validate", "quality")): actions.append("quality.status")
+        if "backup" in request: actions.append("backup.create")
         actions.append("diary.preview")
         explanation = self.local_plan_explanation(row["request"], actions)
         plan=self.propose_plan(work_item_id, actions, explanation)
@@ -225,6 +229,7 @@ class OperationsService:
             elif action == "github.status": results.append({"action": action, "result": self.github_status()})
             elif action == "ollama.status": results.append({"action": action, "result": self.ollama_status()})
             elif action == "quality.status": results.append({"action": action, "result": self.quality_status()})
+            elif action == "backup.create": results.append({"action": action, "result": self.create_backup()})
             else: raise ValueError("action is not safe")
         self.db.execute("UPDATE plans SET state=? WHERE id=?", ("completed", plan_id))
         self.db.execute("UPDATE work_items SET state=? WHERE id=?", ("completed", row["work_item_id"])); self.db.commit()
@@ -327,3 +332,18 @@ class OperationsService:
         result = {"path": str(destination), "sha256": digest, "audit_chain_valid": self.verify_audit_chain()}
         self.audit("database.backed_up", result)
         return result
+
+    @synchronized
+    def create_backup(self) -> dict[str, Any]:
+        """Create a unique local SQLite backup in the configured protected state directory."""
+        stamp = self.now().replace(":", "").replace("+00:00", "Z")
+        path = self.backup_directory / f"dopos-{stamp}-{uuid.uuid4().hex[:8]}.db"
+        return self.backup_to(path)
+
+    @synchronized
+    def backup_inventory(self, limit: int = 20) -> list[dict[str, Any]]:
+        """Read-only local backup inventory; retention and remote copying remain separate controls."""
+        if not self.backup_directory.is_dir():
+            return []
+        files = sorted(self.backup_directory.glob("dopos-*.db"), key=lambda path: path.stat().st_mtime, reverse=True)
+        return [{"name": path.name, "size": path.stat().st_size, "modified_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()} for path in files[:max(1, min(limit, 100))]]

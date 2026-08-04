@@ -8,6 +8,7 @@ User=wasim
 Group=wasim
 WorkingDirectory=/home/wasim/dopos-oss
 Environment=PYTHONPATH=/home/wasim/dopos-oss/src
+Environment=DOPOS_BACKUP_DIR=/var/lib/dopos-oss/backups
 StateDirectory=dopos-oss
 ExecStart=/usr/bin/python3 -m dopos_core.server --host 127.0.0.1 --port 18000 --database /var/lib/dopos-oss/dopos.db
 Restart=on-failure

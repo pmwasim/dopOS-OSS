@@ -56,6 +56,16 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertEqual(restored.status_summary()["work_items"], 1)
             restored.close(); service.close()
 
+    def test_approved_backup_is_unique_and_inventory_is_read_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            service=OperationsService(); service.backup_directory=Path(directory)
+            item=service.create_work_item("Backup", "Create a local backup")
+            plan=service.plan_for_request(item["id"]); self.assertIn("backup.create", plan["actions"])
+            service.approve_plan(plan["id"]); result=service.execute_plan(plan["id"])
+            backup=next(entry["result"] for entry in result["results"] if entry["action"] == "backup.create")
+            self.assertTrue(Path(backup["path"]).is_file()); self.assertTrue(backup["audit_chain_valid"])
+            self.assertEqual(service.backup_inventory()[0]["name"], Path(backup["path"]).name); service.close()
+
     def test_reject_and_kill_switch_block_execution(self):
         service=OperationsService(); item=service.create_work_item("Controls", "check stop controls")
         rejected=service.propose_plan(item["id"], ["status.summary"]); self.assertEqual(service.reject_plan(rejected["id"])["state"], "rejected")
