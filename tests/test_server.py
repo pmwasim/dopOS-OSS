@@ -24,6 +24,7 @@ class ServerTests(unittest.TestCase):
         self.assertTrue(health["workspace"]["configured"])
         self.assertEqual(health["workspace"]["document_count"], 0)
         self.assertEqual(health["workspace"]["folder_count"], 0)
+        self.assertIn("catalog_revision", health["workspace"])
         self.assertFalse(health["backup_retention"]["configured"])
         self.assertFalse(health["backup_retention"]["prune_enabled"])
         self.assertEqual(health["backup_count"], 0)

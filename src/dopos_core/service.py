@@ -304,6 +304,7 @@ class OperationsService:
                 "configured": workspace.get("configured", False),
                 "document_count": workspace.get("count", 0),
                 "folder_count": workspace.get("folder_count", 0),
+                "catalog_revision": workspace.get("catalog_revision"),
             },
             "backup_count": backup_count,
             "backup_retention": {
