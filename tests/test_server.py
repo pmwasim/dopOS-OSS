@@ -107,6 +107,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('Loading local state…', page)
         self.assertIn('Today is unavailable.', page)
         self.assertIn('No matching local documents.', page)
+        self.assertIn('Searching local names…', page)
         self.assertIn('<strong>Goal</strong>', page)
         self.assertIn('<strong>Plan</strong>', page)
         self.assertIn('<strong>Build</strong>', page)
