@@ -179,6 +179,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("automation ·", page)
         self.assertIn("automation · ${result.automation && result.automation.configured ? (result.automation.latest_result || 'ready') : 'unset'}", page)
         self.assertIn("Docker status", page)
+        self.assertIn("Recent CI runs", page)
+        self.assertIn("CI status unavailable.", page)
         self.assertIn("No Docker details returned.", page)
         self.assertIn("GitHub repository", page)
         self.assertIn("GitHub status unavailable.", page)
