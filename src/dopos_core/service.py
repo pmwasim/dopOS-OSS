@@ -628,6 +628,18 @@ class OperationsService:
         files = sorted(self.backup_directory.glob("dopos-*.db"), key=lambda path: path.stat().st_mtime, reverse=True)
         return [{"name": path.name, "size": path.stat().st_size, "modified_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()} for path in files[:max(1, min(limit, 100))]]
 
+    @synchronized
+    def backups_status(self, limit: int = 20) -> dict[str, Any]:
+        """HTTP-facing backup projection with explicit unset retention metadata."""
+        backups = self.backup_inventory(limit=limit)
+        return {
+            "available": True,
+            "count": len(backups),
+            "backups": backups,
+            "retention": self.backup_retention_status(),
+            "message": "Local backup inventory is read-only; retention remains unset.",
+        }
+
     @staticmethod
     def _backup_audit_chain(connection: sqlite3.Connection) -> bool:
         previous = "GENESIS"

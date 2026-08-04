@@ -263,6 +263,20 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertFalse(captured["configured"])
         service.close()
 
+    def test_backups_status_includes_unset_retention_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            service=OperationsService(); service.backup_directory=Path(directory)
+            empty=service.backups_status()
+            self.assertEqual(empty["count"], 0)
+            self.assertEqual(empty["backups"], [])
+            self.assertFalse(empty["retention"]["configured"])
+            service.create_backup()
+            status=service.backups_status()
+            self.assertEqual(status["count"], 1)
+            self.assertEqual(len(status["backups"]), 1)
+            self.assertFalse(status["retention"]["prune_enabled"])
+            service.close()
+
     def test_reject_and_kill_switch_block_execution(self):
         service=OperationsService(); item=service.create_work_item("Controls", "check stop controls")
         rejected=service.propose_plan(item["id"], ["status.summary"]); self.assertEqual(service.reject_plan(rejected["id"])["state"], "rejected")
