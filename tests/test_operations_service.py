@@ -103,6 +103,15 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_request_router_always_appends_diary_preview(self):
+        service=OperationsService()
+        item=service.create_work_item("Diary", "Show safe operational status")
+        plan=service.plan_for_request(item["id"])
+        self.assertEqual(plan["actions"][-1], "diary.preview")
+        self.assertIn("status.summary", plan["actions"])
+        service.close()
+
     def test_request_router_adds_github_for_repository_phrase(self):
         service=OperationsService()
         item=service.create_work_item("Repository", "Show repository metadata status")
