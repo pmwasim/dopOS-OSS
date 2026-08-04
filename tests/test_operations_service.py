@@ -102,6 +102,14 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_request_router_adds_github_for_repository_phrase(self):
+        service=OperationsService()
+        item=service.create_work_item("Repository", "Show repository metadata status")
+        plan=service.plan_for_request(item["id"])
+        self.assertIn("github.status", plan["actions"])
+        service.close()
+
     def test_request_router_adds_ollama_for_ai_runtime_phrase(self):
         service=OperationsService()
         item=service.create_work_item("AI runtime", "Show local AI runtime and model status")
