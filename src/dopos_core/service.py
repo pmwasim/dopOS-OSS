@@ -294,6 +294,9 @@ class OperationsService:
         workspace = self.workspace_status(limit=100)
         retention = self.backup_retention_status()
         backup_count = len(self.backup_inventory(limit=100))
+        queue = self.autonomous_work_queue(limit=1)
+        loop = self.autonomous_loop_status(limit=1)
+        latest = loop["cycles"][0] if loop.get("cycles") else None
         return {
             "status": "ok" if audit_chain_valid else "degraded",
             "core": "dopos",
@@ -310,6 +313,14 @@ class OperationsService:
             "backup_retention": {
                 "configured": retention["configured"],
                 "prune_enabled": retention["prune_enabled"],
+            },
+            "queue": {
+                "configured": queue.get("configured", False),
+                "count": queue.get("count", 0),
+            },
+            "automation": {
+                "configured": loop.get("configured", False),
+                "latest_result": latest.get("result") if latest else None,
             },
         }
 

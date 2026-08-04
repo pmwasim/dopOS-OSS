@@ -278,6 +278,10 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(health["backup_count"], 0)
         self.assertFalse(health["backup_retention"]["configured"])
         self.assertFalse(health["backup_retention"]["prune_enabled"])
+        self.assertIn("configured", health["queue"])
+        self.assertIn("count", health["queue"])
+        self.assertIn("configured", health["automation"])
+        self.assertIn("latest_result", health["automation"])
         service.close()
 
     def test_request_router_adds_health_status_without_backup_create(self):
