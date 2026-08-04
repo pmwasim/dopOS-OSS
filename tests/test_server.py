@@ -68,6 +68,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Find a file or folder", page)
         self.assertIn("searchWorkspace", page)
         self.assertIn("loadWorkspace", page)
+        self.assertIn("loadDiary()", page)
         self.assertIn("folder</small>", page)
         self.assertIn("Workspace is ready and empty.", page)
         self.assertIn("api('/today')", page)
