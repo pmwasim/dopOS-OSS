@@ -601,6 +601,14 @@ class OperationsServiceTests(unittest.TestCase):
             plan=service.plan_for_request(item["id"])
         self.assertEqual(plan["actions"], ["status.summary", "ci.status", "diary.preview"]); service.close()
 
+
+    def test_request_router_adds_ollama_for_installed_models_phrase(self):
+        service = OperationsService()
+        item = service.create_work_item("Models", "Show installed models inventory")
+        plan = service.plan_for_request(item["id"])
+        self.assertIn("ollama.status", plan["actions"])
+        service.close()
+
     def test_ollama_adapter_is_allowlisted_and_routed(self):
         service=OperationsService(); item=service.create_work_item("Models", "Show local Ollama model status")
         plan=service.plan_for_request(item["id"]); self.assertIn("ollama.status", plan["actions"])
