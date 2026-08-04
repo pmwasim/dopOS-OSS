@@ -95,6 +95,14 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(result, {"id":1,"kind":"plan.executed","created_at":"now"}); service.close()
 
 
+
+    def test_request_router_adds_queue_status(self):
+        service=OperationsService()
+        item=service.create_work_item("Queue route", "Show autonomous queue status and queued work")
+        plan=service.plan_for_request(item["id"])
+        self.assertIn("queue.status", plan["actions"])
+        service.close()
+
     def test_request_router_adds_backup_retention_without_create(self):
         service=OperationsService()
         for title, request in (
