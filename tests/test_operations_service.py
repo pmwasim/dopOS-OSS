@@ -13,6 +13,13 @@ class OperationsServiceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "requires approval"): service.execute_plan(plan["id"])
         service.approve_plan(plan["id"]); done=service.execute_plan(plan["id"])
         self.assertEqual(done["state"], "completed"); self.assertGreaterEqual(len(service.diary()), 4); service.close()
+
+    def test_recent_work_is_durable_and_includes_latest_plan(self):
+        service=OperationsService(); item=service.create_work_item("History", "Show Docker status")
+        plan=service.plan_for_request(item["id"])
+        recent=service.work_items(); self.assertEqual(recent[0]["id"], item["id"])
+        self.assertEqual(recent[0]["plan"]["id"], plan["id"])
+        self.assertEqual(service.work_item(item["id"])["plan"]["state"], "awaiting_approval"); service.close()
     def test_rejects_unallowlisted_actions(self):
         service=OperationsService(); item=service.create_work_item("Unsafe", "do not run arbitrary command")
         with self.assertRaisesRegex(ValueError, "unsupported"): service.propose_plan(item["id"], ["shell.rm_rf"])

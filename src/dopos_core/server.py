@@ -16,6 +16,10 @@ class Handler(BaseHTTPRequestHandler):
             data=PAGE.encode(); self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data); return
         if self.path == "/health": return self.reply(200, {"status":"ok", "core":"dopos"})
         if self.path == "/tools/status": return self.reply(200, self.service.tool_status())
+        if self.path == "/work-items": return self.reply(200, self.service.work_items())
+        if self.path.startswith("/work-items/"):
+            try: return self.reply(200, self.service.work_item(int(self.path.split("/")[2])))
+            except (IndexError, ValueError) as exc: return self.reply(404, {"error":str(exc)})
         if self.path == "/diary": return self.reply(200, self.service.diary())
         return self.reply(404, {"error":"not found"})
     def do_POST(self):

@@ -63,6 +63,42 @@ class OperationsService:
         item = {"id": cursor.lastrowid, "title": title.strip(), "request": request.strip(), "state": "open", "created_at": now}; self.audit("work_item.created", item); return item
 
     @synchronized
+    def work_items(self, limit: int = 12) -> list[dict[str, Any]]:
+        """Recent durable work, with the most recent plan state for each item."""
+        rows = self.db.execute("""
+            SELECT w.id, w.title, w.request, w.state, w.created_at,
+                   p.id AS plan_id, p.actions_json, p.state AS plan_state,
+                   p.created_at AS plan_created_at, p.approved_at, p.explanation
+            FROM work_items AS w
+            LEFT JOIN plans AS p ON p.id = (
+                SELECT id FROM plans WHERE work_item_id=w.id ORDER BY id DESC LIMIT 1
+            )
+            ORDER BY w.id DESC LIMIT ?
+        """, (max(1, min(limit, 100)),)).fetchall()
+        return [self._work_item_row(row) for row in rows]
+
+    def _work_item_row(self, row: sqlite3.Row) -> dict[str, Any]:
+        item = {key: row[key] for key in ("id", "title", "request", "state", "created_at")}
+        if row["plan_id"] is not None:
+            item["plan"] = {
+                "id": row["plan_id"], "actions": json.loads(row["actions_json"]),
+                "state": row["plan_state"], "created_at": row["plan_created_at"],
+                "approved_at": row["approved_at"], "explanation": row["explanation"],
+            }
+        else:
+            item["plan"] = None
+        return item
+
+    @synchronized
+    def work_item(self, work_item_id: int) -> dict[str, Any]:
+        """Read a durable work item and its latest plan without changing state."""
+        rows = self.work_items(limit=100)
+        for item in rows:
+            if item["id"] == work_item_id:
+                return item
+        raise ValueError("work item not found")
+
+    @synchronized
     def propose_plan(self, work_item_id: int, actions: list[str], explanation: str = "") -> dict[str, Any]:
         if not actions or any(action not in SAFE_ACTIONS for action in actions): raise ValueError("plan contains unsupported action")
         if not self.db.execute("SELECT 1 FROM work_items WHERE id=?", (work_item_id,)).fetchone(): raise ValueError("work item not found")
