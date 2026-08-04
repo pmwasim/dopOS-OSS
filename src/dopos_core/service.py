@@ -7,6 +7,7 @@ import sqlite3
 import threading
 import shutil
 import subprocess
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -93,10 +94,11 @@ class OperationsService:
                   "Do not suggest extra tools, commands, actions, permissions, or approvals. "
                   f"Request: {request[:1000]}\nFrozen actions: {', '.join(actions)}")
         try:
-            result=subprocess.run([executable, "run", "qwen3:latest", prompt], text=True, capture_output=True, timeout=90, check=False)
+            result=subprocess.run([executable, "run", "--hidethinking", "--think=false", "--nowordwrap", "qwen3:latest", prompt], text=True, capture_output=True, timeout=90, check=False)
         except subprocess.TimeoutExpired: return fallback
-        text=result.stdout.strip()
-        return text[:4000] if result.returncode == 0 and text else fallback
+        text=re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", result.stdout).strip()
+        text=" ".join(text.split())
+        return text[:1000] if result.returncode == 0 and text else fallback
 
     @synchronized
     def approve_plan(self, plan_id: int) -> dict[str, Any]:

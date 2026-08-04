@@ -66,9 +66,10 @@ class OperationsServiceTests(unittest.TestCase):
     def test_local_explanation_cannot_change_frozen_actions(self):
         service=OperationsService(); item=service.create_work_item("Explain", "Show Docker status")
         with patch("dopos_core.service.shutil.which", return_value="ollama"), patch("dopos_core.service.subprocess.run") as run:
-            run.return_value=type("Result", (), {"returncode":0,"stdout":"The approved read-only Docker check is ready.","stderr":""})()
+            run.return_value=type("Result", (), {"returncode":0,"stdout":"\u001b[1DThe approved read-only Docker check is ready.","stderr":""})()
             plan=service.plan_for_request(item["id"])
         self.assertEqual(plan["actions"], ["status.summary", "docker.status", "diary.preview"])
-        self.assertIn("Docker", plan["explanation"]); service.close()
+        self.assertIn("Docker", plan["explanation"]); self.assertNotIn("\u001b", plan["explanation"])
+        self.assertIn("--hidethinking", run.call_args.args[0]); service.close()
 
 import sqlite3
