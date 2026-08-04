@@ -85,6 +85,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("api('/today')", page)
         self.assertIn("Stop control enabled", page)
         self.assertIn("Plan rejected", page)
+        self.assertIn('The approved local checks finished successfully.', page)
         self.assertIn("No action was run.", page)
         self.assertIn("Execution is blocked until it is explicitly resumed.", page)
         self.assertGreaterEqual(page.count("loadToday()"), 3)
