@@ -520,6 +520,20 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(WORKSPACE_SUPPORTED_EXTENSIONS, (".md", ".txt", ".pdf", ".docx", ".xlsx", ".pptx", ".ods", ".odt", ".odp"))
         self.assertEqual(len(WORKSPACE_SUPPORTED_EXTENSIONS), 9)
 
+
+    def test_workspace_status_ignores_hidden_scaffold_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".gitkeep").write_text("", encoding="utf-8")
+            (root / ".secret.bin").write_text("x", encoding="utf-8")
+            (root / "note.md").write_text("# n\n", encoding="utf-8")
+            service = OperationsService(); service.workspace_directory = root
+            status = service.workspace_status()
+            self.assertEqual(status["count"], 1)
+            self.assertEqual(status["unsupported_skipped"], 0)
+            self.assertEqual([d["path"] for d in status["documents"]], ["note.md"])
+            service.close()
+
     def test_workspace_status_includes_extension_counts(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

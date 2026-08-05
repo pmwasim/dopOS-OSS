@@ -477,6 +477,9 @@ class OperationsService:
                     continue
                 relative = path.relative_to(root)
                 relative_text = str(relative)
+                # Scaffold/hidden paths are not catalog documents.
+                if any(part.startswith('.') for part in relative.parts):
+                    continue
                 if needle and needle not in relative_text.casefold():
                     continue
                 if path.is_dir():
