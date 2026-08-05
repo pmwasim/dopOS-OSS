@@ -314,6 +314,7 @@ class OperationsService:
                 "folder_count": workspace.get("folder_count", 0),
                 "extension_counts": workspace.get("extension_counts") or {},
                 "supported_extensions": workspace.get("supported_extensions") or list(WORKSPACE_SUPPORTED_EXTENSIONS),
+                "total_bytes": workspace.get("total_bytes", 0),
                 "catalog_revision": workspace.get("catalog_revision"),
             },
             "backup_count": backup_count,
@@ -370,6 +371,7 @@ class OperationsService:
                 "folder_count": workspace.get("folder_count", 0),
                 "extension_counts": workspace.get("extension_counts") or {},
                 "supported_extensions": workspace.get("supported_extensions") or list(WORKSPACE_SUPPORTED_EXTENSIONS),
+                "total_bytes": workspace.get("total_bytes", 0),
                 "catalog_revision": workspace.get("catalog_revision"),
             },
             "safety": {
@@ -462,7 +464,7 @@ class OperationsService:
         needle = query.strip().casefold()
         root = self.workspace_directory
         if not root.is_dir():
-            return {"available": True, "configured": False, "query": query, "documents": [], "folders": [], "count": 0, "folder_count": 0, "extension_counts": {}, "supported_extensions": list(WORKSPACE_SUPPORTED_EXTENSIONS), "catalog_revision": None, "message": "Local workspace directory has not been created yet."}
+            return {"available": True, "configured": False, "query": query, "documents": [], "folders": [], "count": 0, "folder_count": 0, "extension_counts": {}, "supported_extensions": list(WORKSPACE_SUPPORTED_EXTENSIONS), "total_bytes": 0, "catalog_revision": None, "message": "Local workspace directory has not been created yet."}
         allowed_suffixes = set(WORKSPACE_SUPPORTED_EXTENSIONS)
         documents = []
         folders = []
@@ -496,13 +498,14 @@ class OperationsService:
             extension_counts[key] = extension_counts.get(key, 0) + 1
         # Highest counts first, then extension name for stable catalog browsing.
         extension_counts = dict(sorted(extension_counts.items(), key=lambda item: (-item[1], item[0])))
-        return {"available": True, "configured": True, "query": query, "documents": documents, "folders": folders, "count": len(documents), "folder_count": len(folders), "extension_counts": extension_counts, "supported_extensions": list(WORKSPACE_SUPPORTED_EXTENSIONS), "catalog_revision": hashlib.sha256(revision_input.encode()).hexdigest(), "message": message}
+        total_bytes = sum(int(document.get("size") or 0) for document in documents)
+        return {"available": True, "configured": True, "query": query, "documents": documents, "folders": folders, "count": len(documents), "folder_count": len(folders), "extension_counts": extension_counts, "supported_extensions": list(WORKSPACE_SUPPORTED_EXTENSIONS), "total_bytes": total_bytes, "catalog_revision": hashlib.sha256(revision_input.encode()).hexdigest(), "message": message}
 
     @synchronized
     def workspace_snapshot(self) -> dict[str, Any]:
         """Capture an approved, metadata-only catalog revision in the audit trail."""
         status = self.workspace_status()
-        return {"available": status["available"], "configured": status["configured"], "document_count": status["count"], "folder_count": status.get("folder_count", 0), "extension_counts": status.get("extension_counts") or {}, "supported_extensions": status.get("supported_extensions") or list(WORKSPACE_SUPPORTED_EXTENSIONS), "catalog_revision": status["catalog_revision"], "message": "Metadata-only workspace snapshot captured in the approved plan evidence."}
+        return {"available": status["available"], "configured": status["configured"], "document_count": status["count"], "folder_count": status.get("folder_count", 0), "extension_counts": status.get("extension_counts") or {}, "supported_extensions": status.get("supported_extensions") or list(WORKSPACE_SUPPORTED_EXTENSIONS), "total_bytes": status.get("total_bytes", 0), "catalog_revision": status["catalog_revision"], "message": "Metadata-only workspace snapshot captured in the approved plan evidence."}
 
     @synchronized
     def quality_tool_availability(self) -> dict[str, Any]:

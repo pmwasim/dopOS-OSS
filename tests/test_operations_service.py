@@ -65,6 +65,7 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertIn("workspace", today)
             self.assertIn("extension_counts", today["workspace"])
             self.assertIn("supported_extensions", today["workspace"])
+            self.assertIn("total_bytes", today["workspace"])
             self.assertIn(".md", today["workspace"]["supported_extensions"])
             self.assertTrue(today["workspace"]["configured"])
             self.assertEqual(today["workspace"]["document_count"], 0)
@@ -298,6 +299,7 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertIn("catalog_revision", health["workspace"])
         self.assertIn("extension_counts", health["workspace"])
         self.assertEqual(health["workspace"]["extension_counts"], {})
+        self.assertEqual(health["workspace"]["total_bytes"], 0)
         self.assertIn(".md", health["workspace"]["supported_extensions"])
         self.assertEqual(health["backup_count"], 0)
         self.assertFalse(health["backup_retention"]["configured"])
@@ -519,6 +521,7 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertEqual(status["count"], 3)
             self.assertEqual(status["extension_counts"], {".md": 2, ".txt": 1})
             self.assertEqual(list(status["extension_counts"]), [".md", ".txt"])
+            self.assertEqual(status["total_bytes"], (docs / "a.md").stat().st_size + (docs / "b.txt").stat().st_size + (docs / "c.md").stat().st_size)
             self.assertIn(".md", status["supported_extensions"])
             self.assertIn(".pdf", status["supported_extensions"])
 
