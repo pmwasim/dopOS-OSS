@@ -380,6 +380,7 @@ class OperationsService:
                 "latest_result": latest.get("result") if latest else None,
                 "latest_title": latest.get("title") if latest else None,
             },
+            "quality": self.quality_tool_availability(),
         }
 
     @synchronized

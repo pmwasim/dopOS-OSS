@@ -255,6 +255,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("backups ·", page)
         self.assertIn("rev ·", page)
         self.assertIn("quality ·", page)
+        self.assertIn("gates configured", page)
+        self.assertIn("<strong>Quality</strong>", page)
         self.assertIn("Local tools", page)
         self.assertIn("const labels = {docker:'Docker', github:'GitHub', ci:'CI', ollama:'Local AI', quality:'Quality'}", page)
         self.assertIn("available", page)

@@ -60,6 +60,8 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertFalse(today["recovery"]["retention"]["prune_enabled"])
             self.assertIn("queue", today)
             self.assertIn("automation", today)
+            self.assertIn("quality", today)
+            self.assertTrue(today["quality"].get("configured") or today["quality"].get("available"))
             self.assertIn("workspace", today)
             self.assertTrue(today["workspace"]["configured"])
             self.assertEqual(today["workspace"]["document_count"], 0)
