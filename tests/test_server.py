@@ -262,6 +262,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(page.count("Local quality checks are unavailable."), 1)
         self.assertIn("backups ·", page)
         self.assertIn("rev ·", page)
+        self.assertIn("backup_retention.message", page)
         self.assertIn("quality ·", page)
         self.assertEqual(page.count("quality ·"), 1)
         self.assertIn("gates configured", page)
