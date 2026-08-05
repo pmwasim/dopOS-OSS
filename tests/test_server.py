@@ -68,6 +68,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Diary", page)
         self.assertIn("/journal.md", page)
         self.assertIn("Export Markdown", page)
+        self.assertEqual(page.count('Export Markdown'), 1)
         self.assertIn("Export Diary as Markdown", page)
         self.assertIn('aria-label="Ask dopOS anything"', page)
         self.assertIn('aria-label="Send request"', page)
