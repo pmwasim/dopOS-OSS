@@ -497,6 +497,8 @@ class OperationsService:
             except (OSError, ValueError):
                 continue
         message = "Local workspace search completed without reading document contents." if needle else "Local workspace inventory completed without reading document contents."
+        if unsupported_skipped:
+            message = f"{message} Skipped {unsupported_skipped} unsupported file{'s' if unsupported_skipped != 1 else ''} outside the supported extension list."
         revision_input = "\n".join(
             [f"folder|{folder['path']}|{folder['modified_at']}" for folder in folders]
             + [f"document|{document['path']}|{document['size']}|{document['modified_at']}" for document in documents]

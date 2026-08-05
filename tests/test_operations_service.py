@@ -582,6 +582,7 @@ class OperationsServiceTests(unittest.TestCase):
             status=service.workspace_status()
             self.assertTrue(status["configured"]); self.assertEqual(status["count"], 2)
             self.assertEqual(status["unsupported_skipped"], 1)
+            self.assertIn("Skipped 1 unsupported file", status["message"])
             self.assertEqual(status["folder_count"], 1)
             self.assertEqual([entry["path"] for entry in status["folders"]], ["Projects"])
             self.assertEqual([entry["path"] for entry in status["documents"]], ["Projects/proposal.md", "readme.txt"])
