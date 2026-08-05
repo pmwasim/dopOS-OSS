@@ -249,6 +249,15 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertIn("workspace.status", plan["actions"]); service.close()
 
 
+
+    def test_request_router_adds_workspace_for_truncated_listing_phrase(self):
+        service=OperationsService()
+        item=service.create_work_item("Truncated", "Check truncated listing and listing truncated status")
+        with patch.object(service, "local_plan_explanation", return_value="Safe workspace plan"):
+            plan=service.plan_for_request(item["id"])
+        self.assertIn("workspace.status", plan["actions"]); service.close()
+
+
     def test_request_router_adds_workspace_snapshot(self):
         service=OperationsService()
         item=service.create_work_item("Snapshot route", "Capture workspace snapshot catalog revision")
