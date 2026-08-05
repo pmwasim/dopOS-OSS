@@ -104,6 +104,8 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(page.count("catalog ready"), 1)
         self.assertIn("total_bytes", page)
         self.assertIn("unsupported_skipped", page)
+        self.assertIn("truncated", page)
+        self.assertGreaterEqual(page.count("truncated"), 1)
         self.assertIn("result.unsupported_skipped", page)
         self.assertIn("includes('Skipped')", page)
         self.assertEqual(page.count("includes('Skipped')"), 1)
