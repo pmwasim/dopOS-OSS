@@ -84,6 +84,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Local quality gates are configured", page)
         self.assertEqual(page.count("Local quality gates are configured"), 1)
         self.assertIn(">Quality</span>", page)
+        self.assertEqual(page.count(">Quality</span>"), 1)
         self.assertIn("Available locally", page)
         self.assertEqual(page.count('Available locally'), 1)
         self.assertIn("Export still downloads the current journal projection.", page)
