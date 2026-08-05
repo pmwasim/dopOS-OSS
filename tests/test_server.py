@@ -63,6 +63,7 @@ class ServerTests(unittest.TestCase):
         page = urlopen(self.url).read().decode()
         self.assertIn("Execute approved plan", page)
         self.assertIn("Ask dopOS anything", page)
+        self.assertGreaterEqual(page.count('Ask dopOS anything'), 1)
         self.assertIn('Ask dopOS about this machine. It will create a safe plan and wait for your decision.', page)
         self.assertIn("Live Work", page)
         self.assertEqual(page.count('Live Work'), 1)
