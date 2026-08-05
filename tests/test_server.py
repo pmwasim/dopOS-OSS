@@ -172,6 +172,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('Reject</button>', page)
         self.assertIn('Stop</button>', page)
         self.assertIn('This plan is frozen. It contains only local, read-only checks.', page)
+        self.assertEqual(page.count('This plan is frozen. It contains only local, read-only checks.'), 1)
         self.assertIn('The approved local checks finished successfully.', page)
         self.assertIn("No action was run.", page)
         self.assertIn("Execution is blocked until it is explicitly resumed.", page)
