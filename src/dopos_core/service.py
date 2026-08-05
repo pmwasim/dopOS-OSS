@@ -187,7 +187,7 @@ class OperationsService:
             actions.append("queue.status")
         if any(phrase in request for phrase in ("runtime health", "service health", "system health", "health probe", "health status", "service probe", "monitor health", "local monitor", "runtime probe", "ledger health", "audit chain", "runtime ledger", "health check", "probe runtime", "local health probe", "local runtime health", "host health")):
             actions.append("health.status")
-        if any(phrase in request for phrase in ("tool status", "tools status", "local tools", "control room tools", "tools availability", "tool availability", "control room header")):
+        if any(phrase in request for phrase in ("tool status", "tools status", "local tools", "control room tools", "tools availability", "tool availability", "control room header", "quality configured", "gates configured")):
             actions.append("tools.status")
         if any(phrase in request for phrase in ("kill switch status", "kill switch", "execution safety", "safety control", "control status", "execution paused", "safety ready", "paused execution")):
             actions.append("control.status")

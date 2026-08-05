@@ -353,6 +353,14 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertFalse(captured["backup_retention"]["configured"])
         service.close()
 
+
+    def test_request_router_adds_tools_status_for_quality_configured(self):
+        service=OperationsService()
+        item=service.create_work_item("Configured", "Are the quality configured gates visible in local tools?")
+        with patch.object(service, "local_plan_explanation", return_value="Safe tools plan"):
+            plan=service.plan_for_request(item["id"])
+        self.assertIn("tools.status", plan["actions"]); service.close()
+
     def test_request_router_adds_tools_status_aggregate(self):
         service = OperationsService()
         for title, request in (
