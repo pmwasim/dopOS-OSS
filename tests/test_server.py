@@ -94,6 +94,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("searchWorkspace", page)
         self.assertIn("loadWorkspace", page)
         self.assertIn("supported types", page)
+        self.assertIn("catalog bytes", page)
+        self.assertEqual(page.count("catalog bytes"), 1)
         self.assertIn("total_bytes", page)
         self.assertIn("result.total_bytes", page)
         self.assertIn("result.workspace.total_bytes", page)
