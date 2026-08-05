@@ -121,6 +121,8 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(page.count("Safety ready"), 1)
         self.assertIn("Plan rejected", page)
         self.assertIn('<h3>Completed</h3>', page)
+        self.assertIn('Recorded result from the approved run.', page)
+        self.assertEqual(page.count('Recorded result from the approved run.'), 1)
         self.assertGreaterEqual(page.count('<h3>Completed</h3>'), 1)
         self.assertEqual(page.count('Plan rejected'), 1)
         self.assertIn('Preparing the smallest safe plan…', page)
