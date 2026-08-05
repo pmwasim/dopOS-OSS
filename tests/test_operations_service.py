@@ -284,6 +284,9 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertIn("configured", health["automation"])
         self.assertIn("latest_result", health["automation"])
         self.assertIn("latest_title", health["automation"])
+        self.assertIn("quality", health)
+        self.assertTrue(health["quality"]["available"])
+        self.assertTrue(health["quality"].get("configured"))
         service.close()
 
 
