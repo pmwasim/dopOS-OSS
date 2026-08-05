@@ -368,7 +368,7 @@ class OperationsServiceTests(unittest.TestCase):
         service.approve_plan(plan["id"])
         done = service.execute_plan(plan["id"])
         captured = next(entry["result"] for entry in done["results"] if entry["action"] == "tools.status")
-        for name in ("docker", "github", "ci", "ollama"):
+        for name in ("docker", "github", "ci", "ollama", "quality"):
             self.assertIn(name, captured)
             self.assertIn("available", captured[name])
         service.close()
@@ -677,11 +677,22 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(run.call_args.args[0], ["gh", "run", "list", "--limit", "5", "--json", "status,conclusion,workflowName,headSha,createdAt,updatedAt,url"])
         service.close()
 
+
+    def test_tool_status_quality_is_availability_only(self):
+        service = OperationsService()
+        with patch.object(service, "quality_status") as quality_status:
+            tools = service.tool_status()
+        self.assertIn("quality", tools)
+        self.assertTrue(tools["quality"]["available"])
+        self.assertTrue(tools["quality"].get("configured"))
+        quality_status.assert_not_called()
+        service.close()
+
     def test_tool_status_includes_read_only_ci_availability(self):
         service=OperationsService()
         with patch.object(service, "ci_status", return_value={"available": True, "ok": True, "runs": []}):
             tools = service.tool_status()
-        self.assertEqual(set(tools), {"docker", "github", "ci", "ollama"})
+        self.assertEqual(set(tools), {"docker", "github", "ci", "ollama", "quality"})
         self.assertTrue(tools["ci"]["available"])
         service.close()
 
@@ -704,6 +715,14 @@ class OperationsServiceTests(unittest.TestCase):
             result=service.quality_status()
         self.assertTrue(result["ok"]); self.assertEqual([check["name"] for check in result["checks"]], ["compile", "tests", "governance"])
         self.assertEqual(run.call_count, 3); self.assertTrue(all(isinstance(call.args[0], list) for call in run.call_args_list)); service.close()
+
+
+    def test_request_router_adds_quality_for_lint_phrase(self):
+        service=OperationsService()
+        item=service.create_work_item("Lint", "Please lint and run unit tests")
+        with patch.object(service, "local_plan_explanation", return_value="Safe quality plan"):
+            plan=service.plan_for_request(item["id"])
+        self.assertIn("quality.status", plan["actions"]); service.close()
 
     def test_request_router_adds_quality_check_without_expanding_allowlist(self):
         service=OperationsService(); item=service.create_work_item("Quality", "Run CI tests and validate build")

@@ -176,7 +176,7 @@ class OperationsService:
         if re.search(r"\bci\b", request) or any(phrase in request for phrase in ("github actions", "workflow", "pipeline")):
             actions.append("ci.status")
         if "ollama" in request or "model" in request or "ai runtime" in request or "installed models" in request: actions.append("ollama.status")
-        if any(word in request for word in ("test", "build", "validate", "quality")): actions.append("quality.status")
+        if any(word in request for word in ("test", "build", "validate", "quality", "lint", "compile", "unit test", "unit tests", "local checks")): actions.append("quality.status")
         if any(word in request for word in ("workspace", "document", "documents", "folder", "folders", "file", "files")):
             actions.append("workspace.status")
         if any(word in request for word in ("workspace snapshot", "document snapshot", "workspace version", "document version", "catalog revision")):
@@ -389,6 +389,7 @@ class OperationsService:
             "github": self.github_status(),
             "ci": self.ci_status(),
             "ollama": self.ollama_status(),
+            "quality": self.quality_tool_availability(),
         }
 
     @synchronized
@@ -490,6 +491,15 @@ class OperationsService:
         return {"available": status["available"], "configured": status["configured"], "document_count": status["count"], "folder_count": status.get("folder_count", 0), "catalog_revision": status["catalog_revision"], "message": "Metadata-only workspace snapshot captured in the approved plan evidence."}
 
     @synchronized
+    def quality_tool_availability(self) -> dict[str, Any]:
+        """Read-only header probe: report whether fixed local quality gates are configured, without running them."""
+        compile_script = self.project_root / "scripts" / "compile_source.py"
+        validate_script = self.project_root / "scripts" / "validate_companyos.py"
+        tests_dir = self.project_root / "tests"
+        if not compile_script.is_file() or not validate_script.is_file() or not tests_dir.is_dir():
+            return {"available": False, "ok": False, "reason": "Local quality gate scripts are not configured"}
+        return {"available": True, "ok": True, "configured": True, "message": "Local quality gates are configured"}
+
     def quality_status(self) -> dict[str, Any]:
         """Run only the repository's fixed local CI gates; no shell interpolation."""
         checks = [
