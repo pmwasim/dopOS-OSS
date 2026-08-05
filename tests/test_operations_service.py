@@ -573,6 +573,18 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_workspace_status_truncates_when_folders_over_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for i in range(3):
+                (root / f"dir{i}").mkdir()
+            service = OperationsService(); service.workspace_directory = root
+            status = service.workspace_status(limit=2)
+            self.assertEqual(status["folder_count"], 2)
+            self.assertTrue(status["truncated"])
+            service.close()
+
     def test_workspace_status_sets_truncated_when_over_limit(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

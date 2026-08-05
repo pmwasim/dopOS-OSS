@@ -491,6 +491,8 @@ class OperationsService:
                 if path.is_dir():
                     if len(folders) < listing_limit:
                         folders.append({"path": relative_text, "modified_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()})
+                    else:
+                        truncated = True
                     continue
                 if not path.is_file():
                     continue
