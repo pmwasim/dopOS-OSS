@@ -696,6 +696,13 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_quality_tool_availability_available_true_literal(self):
+        from pathlib import Path
+        text = (Path(__file__).resolve().parents[1] / "src" / "dopos_core" / "service.py").read_text(encoding="utf-8")
+        self.assertIn('return {"available": True, "ok": True, "configured": True, "message": "Local quality gates are configured"}', text)
+        self.assertEqual(text.count('return {"available": True, "ok": True, "configured": True, "message": "Local quality gates are configured"}'), 1)
+
     def test_quality_tool_availability_configured_true_literal(self):
         from pathlib import Path
         text = (Path(__file__).resolve().parents[1] / "src" / "dopos_core" / "service.py").read_text(encoding="utf-8")
