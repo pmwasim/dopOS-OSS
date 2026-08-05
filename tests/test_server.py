@@ -257,6 +257,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("backups ·", page)
         self.assertIn("rev ·", page)
         self.assertIn("quality ·", page)
+        self.assertEqual(page.count("quality ·"), 1)
         self.assertIn("gates configured", page)
         self.assertIn("<strong>Quality</strong>", page)
         self.assertIn("Local tools", page)
