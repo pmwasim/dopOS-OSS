@@ -184,6 +184,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("No action was run.", page)
         self.assertEqual(page.count('No action was run.'), 1)
         self.assertIn("Execution is blocked until it is explicitly resumed.", page)
+        self.assertEqual(page.count('Execution is blocked until it is explicitly resumed.'), 1)
         self.assertGreaterEqual(page.count("loadToday()"), 3)
         self.assertIn("state.queue", page)
         self.assertIn("no queued work", page)
