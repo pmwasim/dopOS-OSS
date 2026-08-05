@@ -100,6 +100,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("supported types", page)
         self.assertIn("catalog bytes", page)
         self.assertEqual(page.count("catalog bytes"), 1)
+        self.assertIn("catalog ready", page)
+        self.assertEqual(page.count("catalog ready"), 1)
         self.assertIn("total_bytes", page)
         self.assertIn("unsupported_skipped", page)
         self.assertIn("result.unsupported_skipped", page)
