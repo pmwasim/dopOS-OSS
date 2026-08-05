@@ -107,6 +107,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("total_bytes", page)
         self.assertIn("unsupported_skipped", page)
         self.assertIn("truncated", page)
+        self.assertIn("listing_limit", page)
+        self.assertGreaterEqual(page.count("listing_limit"), 1)
         self.assertIn("Listing truncated", page)
         self.assertGreaterEqual(page.count("Listing truncated"), 1)
         self.assertGreaterEqual(page.count("truncated"), 1)
