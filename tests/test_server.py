@@ -65,6 +65,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Ask dopOS anything", page)
         self.assertIn('Ask dopOS about this machine. It will create a safe plan and wait for your decision.', page)
         self.assertIn("Live Work", page)
+        self.assertEqual(page.count('Live Work'), 1)
         self.assertIn("Diary", page)
         self.assertIn("/journal.md", page)
         self.assertIn("Export Markdown", page)
