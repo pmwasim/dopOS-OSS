@@ -683,6 +683,22 @@ class OperationsServiceTests(unittest.TestCase):
         service.close()
 
 
+
+    def test_quality_tool_availability_reports_missing_scripts(self):
+        service=OperationsService()
+        with patch.object(service, "project_root", Path("/tmp/dopos-missing-quality-root")):
+            result=service.quality_tool_availability()
+        self.assertFalse(result["available"])
+        self.assertEqual(result["reason"], "Local quality gate scripts are not configured")
+        service.close()
+
+    def test_request_router_adds_quality_for_run_tests_phrase(self):
+        service=OperationsService()
+        item=service.create_work_item("Tests", "Please run tests for this repository")
+        with patch.object(service, "local_plan_explanation", return_value="Safe quality plan"):
+            plan=service.plan_for_request(item["id"])
+        self.assertIn("quality.status", plan["actions"]); service.close()
+
     def test_tool_status_quality_is_availability_only(self):
         service = OperationsService()
         with patch.object(service, "quality_status") as quality_status:
