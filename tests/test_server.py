@@ -255,6 +255,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('${passed}/${checks.length} fixed checks passed; attention needed.', page)
         self.assertIn('All ${checks.length} fixed checks passed.', page)
         self.assertIn("Local quality checks are unavailable.", page)
+        self.assertEqual(page.count("Local quality checks are unavailable."), 1)
         self.assertIn("backups ·", page)
         self.assertIn("rev ·", page)
         self.assertIn("quality ·", page)
