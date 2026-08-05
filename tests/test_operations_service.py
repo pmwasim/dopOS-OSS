@@ -583,6 +583,7 @@ class OperationsServiceTests(unittest.TestCase):
             status = service.workspace_status(limit=2)
             self.assertEqual(status["folder_count"], 2)
             self.assertTrue(status["truncated"])
+            self.assertIn("Catalog listing truncated", status["message"])
             service.close()
 
     def test_workspace_status_sets_truncated_when_over_limit(self):
