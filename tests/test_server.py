@@ -267,6 +267,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(page.count('<strong>Quality</strong>'), 1)
         self.assertIn("Local tools", page)
         self.assertIn("(name === 'quality' && value.configured) ? 'configured' : 'available'", page)
+        self.assertEqual(page.count("(name === 'quality' && value.configured) ? 'configured' : 'available'"), 1)
         self.assertIn("const labels = {docker:'Docker', github:'GitHub', ci:'CI', ollama:'Local AI', quality:'Quality'}", page)
         self.assertIn("available", page)
         self.assertIn("unavailable", page)
