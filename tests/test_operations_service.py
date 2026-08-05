@@ -493,6 +493,8 @@ class OperationsServiceTests(unittest.TestCase):
                 service.close()
             self.assertEqual(status["count"], 3)
             self.assertEqual(status["extension_counts"], {".md": 2, ".txt": 1})
+            self.assertIn(".md", status["supported_extensions"])
+            self.assertIn(".pdf", status["supported_extensions"])
 
     def test_workspace_inventory_is_read_only_and_router_uses_allowlisted_action(self):
         with tempfile.TemporaryDirectory() as directory:

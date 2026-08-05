@@ -21,6 +21,7 @@ MAX_WORK_ITEM_REQUEST = 8_000
 MAX_WORKSPACE_QUERY = 160
 MAX_LOOP_REPORT_BYTES = 256_000
 MAX_WORK_ITEM_HEADER_BYTES = 4_096
+WORKSPACE_SUPPORTED_EXTENSIONS = (".md", ".txt", ".pdf", ".docx", ".xlsx", ".pptx", ".ods", ".odt", ".odp")
 
 def synchronized(method):
     def wrapped(self, *args, **kwargs):
@@ -459,8 +460,8 @@ class OperationsService:
         needle = query.strip().casefold()
         root = self.workspace_directory
         if not root.is_dir():
-            return {"available": True, "configured": False, "query": query, "documents": [], "folders": [], "count": 0, "folder_count": 0, "extension_counts": {}, "catalog_revision": None, "message": "Local workspace directory has not been created yet."}
-        allowed_suffixes = {".md", ".txt", ".pdf", ".docx", ".xlsx", ".pptx", ".ods", ".odt", ".odp"}
+            return {"available": True, "configured": False, "query": query, "documents": [], "folders": [], "count": 0, "folder_count": 0, "extension_counts": {}, "supported_extensions": list(WORKSPACE_SUPPORTED_EXTENSIONS), "catalog_revision": None, "message": "Local workspace directory has not been created yet."}
+        allowed_suffixes = set(WORKSPACE_SUPPORTED_EXTENSIONS)
         documents = []
         folders = []
         for path in sorted(root.rglob("*")):
@@ -491,7 +492,7 @@ class OperationsService:
         for document in documents:
             key = document["extension"] or "(none)"
             extension_counts[key] = extension_counts.get(key, 0) + 1
-        return {"available": True, "configured": True, "query": query, "documents": documents, "folders": folders, "count": len(documents), "folder_count": len(folders), "extension_counts": extension_counts, "catalog_revision": hashlib.sha256(revision_input.encode()).hexdigest(), "message": message}
+        return {"available": True, "configured": True, "query": query, "documents": documents, "folders": folders, "count": len(documents), "folder_count": len(folders), "extension_counts": extension_counts, "supported_extensions": list(WORKSPACE_SUPPORTED_EXTENSIONS), "catalog_revision": hashlib.sha256(revision_input.encode()).hexdigest(), "message": message}
 
     @synchronized
     def workspace_snapshot(self) -> dict[str, Any]:
