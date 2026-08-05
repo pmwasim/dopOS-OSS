@@ -166,6 +166,8 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(page.count("inbox not configured"), 1)
         self.assertIn("state.automation", page)
         self.assertIn("no cycle recorded yet", page)
+        self.assertIn("documents folder not configured", page)
+        self.assertEqual(page.count("documents folder not configured"), 1)
         self.assertEqual(page.count("no cycle recorded yet"), 1)
         self.assertIn("loop evidence not configured", page)
         self.assertEqual(page.count("loop evidence not configured"), 1)
