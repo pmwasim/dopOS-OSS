@@ -121,6 +121,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn('Safe actions require your approval.', page)
         self.assertEqual(page.count('Safe actions require your approval.'), 1)
         self.assertIn("Execution paused — Resume", page)
+        self.assertIn('Execution is blocked. Click to resume explicitly.', page)
+        self.assertEqual(page.count('Execution is blocked. Click to resume explicitly.'), 1)
         self.assertEqual(page.count("Execution paused — Resume"), 1)
         self.assertEqual(page.count("Safety ready"), 1)
         self.assertIn("Plan rejected", page)
