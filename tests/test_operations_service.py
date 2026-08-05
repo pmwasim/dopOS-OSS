@@ -565,6 +565,7 @@ class OperationsServiceTests(unittest.TestCase):
             status = service.workspace_status(limit=2)
             self.assertEqual(status["count"], 2)
             self.assertTrue(status["truncated"])
+            self.assertEqual(status["listing_limit"], 2)
             self.assertIn("Document listing truncated", status["message"])
             service.close()
 

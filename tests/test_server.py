@@ -315,6 +315,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(workspace["total_bytes"], 0)
         self.assertEqual(workspace["unsupported_skipped"], 0)
         self.assertFalse(workspace["truncated"])
+        self.assertEqual(workspace["listing_limit"], 100)
         self.assertIn(".md", workspace["supported_extensions"])
         self.assertIn("supported_extensions", page)
         self.assertIn("Supported:", page)
