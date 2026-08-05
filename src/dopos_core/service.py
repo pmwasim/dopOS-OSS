@@ -509,7 +509,7 @@ class OperationsService:
         if unsupported_skipped:
             message = f"{message} Skipped {unsupported_skipped} unsupported file{'s' if unsupported_skipped != 1 else ''} outside the supported extension list."
         if truncated:
-            message = f"{message} Document listing truncated at the request limit."
+            message = f"{message} Catalog listing truncated at the request limit."
         revision_input = "\n".join(
             [f"folder|{folder['path']}|{folder['modified_at']}" for folder in folders]
             + [f"document|{document['path']}|{document['size']}|{document['modified_at']}" for document in documents]

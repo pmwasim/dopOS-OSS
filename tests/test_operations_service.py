@@ -595,7 +595,7 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertEqual(status["count"], 2)
             self.assertTrue(status["truncated"])
             self.assertEqual(status["listing_limit"], 2)
-            self.assertIn("Document listing truncated", status["message"])
+            self.assertIn("Catalog listing truncated", status["message"])
             service.close()
 
     def test_workspace_status_ignores_hidden_scaffold_files(self):
