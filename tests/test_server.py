@@ -293,6 +293,7 @@ class ServerTests(unittest.TestCase):
         workspace = self.request("/workspace")
         self.assertEqual(workspace["count"], 0)
         self.assertEqual(workspace["extension_counts"], {})
+        self.assertEqual(workspace["total_bytes"], 0)
         self.assertIn(".md", workspace["supported_extensions"])
         self.assertIn("supported_extensions", page)
         self.assertIn("Supported:", page)
