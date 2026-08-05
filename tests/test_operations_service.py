@@ -583,7 +583,7 @@ class OperationsServiceTests(unittest.TestCase):
             status = service.workspace_status(limit=2)
             self.assertEqual(status["folder_count"], 2)
             self.assertTrue(status["truncated"])
-            self.assertIn("Catalog listing truncated", status["message"])
+            self.assertIn("Catalog listing truncated at listing_limit=", status["message"])
             service.close()
 
     def test_workspace_status_sets_truncated_when_over_limit(self):
@@ -596,7 +596,7 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertEqual(status["count"], 2)
             self.assertTrue(status["truncated"])
             self.assertEqual(status["listing_limit"], 2)
-            self.assertIn("Catalog listing truncated", status["message"])
+            self.assertIn("Catalog listing truncated at listing_limit=", status["message"])
             service.close()
 
     def test_workspace_status_ignores_hidden_scaffold_files(self):
