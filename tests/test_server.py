@@ -136,6 +136,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('No matching local documents.', page)
         self.assertEqual(page.count('No matching local documents.'), 1)
         self.assertIn('Searching local names…', page)
+        self.assertEqual(page.count('Searching local names…'), 1)
         self.assertIn('<strong>Goal</strong>', page)
         self.assertIn('<strong>Plan</strong>', page)
         self.assertIn('<strong>Build</strong>', page)
