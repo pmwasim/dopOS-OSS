@@ -515,6 +515,14 @@ class OperationsServiceTests(unittest.TestCase):
         service.close()
 
 
+
+    def test_workspace_snapshot_includes_unsupported_skipped(self):
+        service = OperationsService()
+        snap = service.workspace_snapshot()
+        self.assertEqual(snap["unsupported_skipped"], 0)
+        service.close()
+
+
     def test_workspace_supported_extensions_constant(self):
         from dopos_core.service import WORKSPACE_SUPPORTED_EXTENSIONS
         self.assertEqual(WORKSPACE_SUPPORTED_EXTENSIONS, (".md", ".txt", ".pdf", ".docx", ".xlsx", ".pptx", ".ods", ".odt", ".odp"))
