@@ -183,6 +183,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('<small>approval</small>', page)
         self.assertEqual(page.count('<small>approval</small>'), 1)
         self.assertEqual(page.count("ready to run"), 1)
+        self.assertIn("decision${state.needs_decision.length === 1 ? '' : 's'} waiting", page)
         self.assertGreaterEqual(page.count("needs review"), 1)
         self.assertEqual(page.count("audit verified"), 1)
         self.assertIn("needs review", page)
