@@ -317,6 +317,7 @@ class OperationsService:
             "backup_retention": {
                 "configured": retention["configured"],
                 "prune_enabled": retention["prune_enabled"],
+                "message": retention.get("message"),
             },
             "queue": {
                 "configured": queue.get("configured", False),
@@ -722,7 +723,7 @@ class OperationsService:
             "configured": False,
             "policy": None,
             "prune_enabled": False,
-            "message": "Backup retention is not implemented yet; existing local backups are left untouched.",
+            "message": "Backup retention is unset; existing local backups are left untouched.",
         }
 
     @synchronized
