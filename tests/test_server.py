@@ -118,6 +118,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Stop control enabled", page)
         self.assertEqual(page.count('Stop control enabled'), 1)
         self.assertIn("Safety ready", page)
+        self.assertIn('Safe actions require your approval.', page)
+        self.assertEqual(page.count('Safe actions require your approval.'), 1)
         self.assertIn("Execution paused — Resume", page)
         self.assertEqual(page.count("Execution paused — Resume"), 1)
         self.assertEqual(page.count("Safety ready"), 1)
