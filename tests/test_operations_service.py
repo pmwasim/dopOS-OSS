@@ -694,6 +694,13 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_quality_tool_availability_message_key_unique(self):
+        from pathlib import Path
+        text = (Path(__file__).resolve().parents[1] / "src" / "dopos_core" / "service.py").read_text(encoding="utf-8")
+        self.assertIn('"message": "Local quality gates are configured"', text)
+        self.assertEqual(text.count('"message": "Local quality gates are configured"'), 1)
+
     def test_quality_configured_message_is_unique(self):
         from pathlib import Path
         text = (Path(__file__).resolve().parents[1] / "src" / "dopos_core" / "service.py").read_text(encoding="utf-8")
