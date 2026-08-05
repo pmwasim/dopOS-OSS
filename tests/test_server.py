@@ -82,6 +82,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("loadWorkspace", page)
         self.assertGreaterEqual(page.count("loadWorkspace()"), 4)
         self.assertIn("Workspace inventory is unavailable.", page)
+        self.assertEqual(page.count('Workspace inventory is unavailable.'), 1)
         self.assertIn("loadDiary()", page)
         self.assertIn("loadRecent", page)
         self.assertIn("No work yet.", page)
