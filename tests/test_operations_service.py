@@ -747,6 +747,12 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_quality_short_circuit_fallback_reason_unique(self):
+        from pathlib import Path
+        text = (Path(__file__).resolve().parents[1] / "src" / "dopos_core" / "service.py").read_text(encoding="utf-8")
+        self.assertEqual(text.count("Local quality checks are unavailable."), 1)
+
     def test_quality_short_circuit_returns_empty_checks_literal(self):
         from pathlib import Path
         text = (Path(__file__).resolve().parents[1] / "src" / "dopos_core" / "service.py").read_text(encoding="utf-8")
