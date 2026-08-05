@@ -322,6 +322,7 @@ class OperationsServiceTests(unittest.TestCase):
             ("Probe runtime", "Probe runtime health now"),
             ("Local health probe", "Run a local health probe"),
             ("Local runtime health", "Show local runtime health"),
+            ("Host health", "Show host health"),
         ):
             item = service.create_work_item(title, request)
             plan = service.plan_for_request(item["id"])
