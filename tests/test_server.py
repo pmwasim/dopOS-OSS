@@ -178,6 +178,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("retention unset", page)
         self.assertEqual(page.count("retention unset"), 1)
         self.assertIn("audit verified", page)
+        self.assertEqual(page.count("audit verified"), 1)
         self.assertIn("needs review", page)
         self.assertIn("retention on", page)
         self.assertEqual(page.count("retention on"), 1)
