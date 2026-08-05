@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ci.status", "ollama.status", "quality.status", "backup.create", "backup.verify", "workspace.status", "workspace.snapshot"}
+SAFE_ACTIONS = {"status.summary", "diary.preview", "docker.status", "github.status", "ci.status", "ollama.status", "quality.status", "backup.create", "backup.verify", "backup.retention", "workspace.status", "workspace.snapshot", "loop.status", "queue.status", "health.status", "tools.status", "control.status"}
 MAX_WORK_ITEM_TITLE = 160
 MAX_WORK_ITEM_REQUEST = 8_000
 MAX_WORKSPACE_QUERY = 160
@@ -175,14 +175,26 @@ class OperationsService:
         if "github" in request or "repository" in request or "repo" in request: actions.append("github.status")
         if re.search(r"\bci\b", request) or any(phrase in request for phrase in ("github actions", "workflow", "pipeline")):
             actions.append("ci.status")
-        if "ollama" in request or "model" in request or "ai runtime" in request: actions.append("ollama.status")
-        if any(word in request for word in ("test", "build", "validate", "quality")): actions.append("quality.status")
+        if "ollama" in request or "model" in request or "ai runtime" in request or "installed models" in request: actions.append("ollama.status")
+        if any(word in request for word in ("test", "build", "validate", "quality", "lint", "compile", "unit test", "unit tests", "local checks", "quality gates", "compile source", "local ci", "local quality")): actions.append("quality.status")
         if any(word in request for word in ("workspace", "document", "documents", "folder", "folders", "file", "files")):
             actions.append("workspace.status")
         if any(word in request for word in ("workspace snapshot", "document snapshot", "workspace version", "document version", "catalog revision")):
             actions.append("workspace.snapshot")
+        if any(phrase in request for phrase in ("autonomous loop", "loop status", "engineering loop", "loop evidence")):
+            actions.append("loop.status")
+        if any(phrase in request for phrase in ("work queue", "queue status", "inbox queue", "autonomous queue", "queued work")):
+            actions.append("queue.status")
+        if any(phrase in request for phrase in ("runtime health", "service health", "system health", "health probe", "health status", "service probe", "monitor health", "local monitor", "runtime probe", "ledger health", "audit chain", "runtime ledger", "health check", "probe runtime", "local health probe", "local runtime health", "host health")):
+            actions.append("health.status")
+        if any(phrase in request for phrase in ("tool status", "tools status", "local tools", "control room tools", "tools availability", "tool availability", "control room header", "quality configured", "gates configured")):
+            actions.append("tools.status")
+        if any(phrase in request for phrase in ("kill switch status", "kill switch", "execution safety", "safety control", "control status", "execution paused", "safety ready", "paused execution")):
+            actions.append("control.status")
         if any(term in request for term in ("recovery", "integrity", "verify backup", "backup health")):
             actions.append("backup.verify")
+        elif any(phrase in request for phrase in ("backup retention", "retention policy", "prune backup", "retention status")):
+            actions.append("backup.retention")
         elif "backup" in request:
             actions.append("backup.create")
         actions.append("diary.preview")
@@ -238,7 +250,11 @@ class OperationsService:
     @synchronized
     def control_status(self) -> dict[str, Any]:
         row = self.db.execute("SELECT value,updated_at FROM controls WHERE name='kill_switch'").fetchone()
-        return {"kill_switch": row["value"], "updated_at": row["updated_at"]}
+        return {
+            "kill_switch": row["value"],
+            "execution_paused": row["value"] == "on",
+            "updated_at": row["updated_at"],
+        }
 
     @synchronized
     def execute_plan(self, plan_id: int) -> dict[str, Any]:
@@ -257,8 +273,14 @@ class OperationsService:
             elif action == "quality.status": results.append({"action": action, "result": self.quality_status()})
             elif action == "backup.create": results.append({"action": action, "result": self.create_backup()})
             elif action == "backup.verify": results.append({"action": action, "result": self.verify_backups()})
+            elif action == "backup.retention": results.append({"action": action, "result": self.backup_retention_status()})
             elif action == "workspace.status": results.append({"action": action, "result": self.workspace_status()})
             elif action == "workspace.snapshot": results.append({"action": action, "result": self.workspace_snapshot()})
+            elif action == "loop.status": results.append({"action": action, "result": self.autonomous_loop_status()})
+            elif action == "queue.status": results.append({"action": action, "result": self.autonomous_work_queue()})
+            elif action == "health.status": results.append({"action": action, "result": self.health_status()})
+            elif action == "tools.status": results.append({"action": action, "result": self.tool_status()})
+            elif action == "control.status": results.append({"action": action, "result": self.control_status()})
             else: raise ValueError("action is not safe")
         self.db.execute("UPDATE plans SET state=? WHERE id=?", ("completed", plan_id))
         self.db.execute("UPDATE work_items SET state=? WHERE id=?", ("completed", row["work_item_id"])); self.db.commit()
@@ -273,12 +295,40 @@ class OperationsService:
         """Read-only runtime health suitable for a local monitor or service probe."""
         summary = self.status_summary()
         audit_chain_valid = self.verify_audit_chain()
+        workspace = self.workspace_status(limit=100)
+        retention = self.backup_retention_status()
+        backup_count = len(self.backup_inventory(limit=100))
+        queue = self.autonomous_work_queue(limit=1)
+        loop = self.autonomous_loop_status(limit=1)
+        latest = loop["cycles"][0] if loop.get("cycles") else None
         return {
             "status": "ok" if audit_chain_valid else "degraded",
             "core": "dopos",
             "audit_chain_valid": audit_chain_valid,
             "execution_paused": self.kill_switch_enabled(),
             "records": summary,
+            "workspace": {
+                "configured": workspace.get("configured", False),
+                "document_count": workspace.get("count", 0),
+                "folder_count": workspace.get("folder_count", 0),
+                "catalog_revision": workspace.get("catalog_revision"),
+            },
+            "backup_count": backup_count,
+            "backup_retention": {
+                "configured": retention["configured"],
+                "prune_enabled": retention["prune_enabled"],
+            },
+            "queue": {
+                "configured": queue.get("configured", False),
+                "count": queue.get("count", 0),
+                "next_title": queue["items"][0]["title"] if queue.get("items") else None,
+            },
+            "automation": {
+                "configured": loop.get("configured", False),
+                "latest_result": latest.get("result") if latest else None,
+                "latest_title": latest.get("title") if latest else None,
+            },
+            "quality": self.quality_tool_availability(),
         }
 
     @synchronized
@@ -295,6 +345,10 @@ class OperationsService:
         """).fetchall()
         entries = [{"work_item_id": row["id"], "title": self.display_text(row["title"], 160), "plan_id": row["plan_id"], "state": row["plan_state"]} for row in rows]
         backups = self.backup_inventory(limit=1)
+        queue = self.autonomous_work_queue(limit=1)
+        loop = self.autonomous_loop_status(limit=1)
+        workspace = self.workspace_status(limit=100)
+        latest = loop["cycles"][0] if loop.get("cycles") else None
         return {
             "generated_at": self.now(),
             "needs_decision": [entry for entry in entries if entry["state"] == "awaiting_approval"],
@@ -304,7 +358,29 @@ class OperationsService:
                 "audit_chain_valid": self.verify_audit_chain(),
                 "backup_count": len(self.backup_inventory(limit=100)),
                 "latest_backup": backups[0] if backups else None,
+                "retention": self.backup_retention_status(),
             },
+            "workspace": {
+                "configured": workspace.get("configured", False),
+                "document_count": workspace.get("count", 0),
+                "folder_count": workspace.get("folder_count", 0),
+                "catalog_revision": workspace.get("catalog_revision"),
+            },
+            "safety": {
+                "execution_paused": self.kill_switch_enabled(),
+                "kill_switch": self.control_status()["kill_switch"],
+            },
+            "queue": {
+                "configured": queue.get("configured", False),
+                "count": queue.get("count", 0),
+                "next_title": queue["items"][0]["title"] if queue.get("items") else None,
+            },
+            "automation": {
+                "configured": loop.get("configured", False),
+                "latest_result": latest.get("result") if latest else None,
+                "latest_title": latest.get("title") if latest else None,
+            },
+            "quality": self.quality_tool_availability(),
         }
 
     @synchronized
@@ -313,7 +389,9 @@ class OperationsService:
         return {
             "docker": self.docker_status(),
             "github": self.github_status(),
+            "ci": self.ci_status(),
             "ollama": self.ollama_status(),
+            "quality": self.quality_tool_availability(),
         }
 
     @synchronized
@@ -378,34 +456,57 @@ class OperationsService:
         needle = query.strip().casefold()
         root = self.workspace_directory
         if not root.is_dir():
-            return {"available": True, "configured": False, "query": query, "documents": [], "count": 0, "catalog_revision": None, "message": "Local workspace directory has not been created yet."}
+            return {"available": True, "configured": False, "query": query, "documents": [], "folders": [], "count": 0, "folder_count": 0, "catalog_revision": None, "message": "Local workspace directory has not been created yet."}
         allowed_suffixes = {".md", ".txt", ".pdf", ".docx", ".xlsx", ".pptx", ".ods", ".odt", ".odp"}
         documents = []
+        folders = []
         for path in sorted(root.rglob("*")):
-            if len(documents) >= max(1, min(limit, 100)):
-                break
-            if not path.is_file() or path.is_symlink() or path.suffix.lower() not in allowed_suffixes:
-                continue
             try:
-                relative = path.relative_to(root)
-                if needle and needle not in str(relative).casefold():
+                if path.is_symlink():
                     continue
-                documents.append({"path": str(relative), "extension": path.suffix.lower(), "size": path.stat().st_size, "modified_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()})
+                relative = path.relative_to(root)
+                relative_text = str(relative)
+                if needle and needle not in relative_text.casefold():
+                    continue
+                if path.is_dir():
+                    if len(folders) < max(1, min(limit, 100)):
+                        folders.append({"path": relative_text, "modified_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()})
+                    continue
+                if not path.is_file() or path.suffix.lower() not in allowed_suffixes:
+                    continue
+                if len(documents) >= max(1, min(limit, 100)):
+                    continue
+                documents.append({"path": relative_text, "extension": path.suffix.lower(), "size": path.stat().st_size, "modified_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()})
             except (OSError, ValueError):
                 continue
         message = "Local workspace search completed without reading document contents." if needle else "Local workspace inventory completed without reading document contents."
-        revision_input = "\n".join(f"{document['path']}|{document['size']}|{document['modified_at']}" for document in documents)
-        return {"available": True, "configured": True, "query": query, "documents": documents, "count": len(documents), "catalog_revision": hashlib.sha256(revision_input.encode()).hexdigest(), "message": message}
+        revision_input = "\n".join(
+            [f"folder|{folder['path']}|{folder['modified_at']}" for folder in folders]
+            + [f"document|{document['path']}|{document['size']}|{document['modified_at']}" for document in documents]
+        )
+        return {"available": True, "configured": True, "query": query, "documents": documents, "folders": folders, "count": len(documents), "folder_count": len(folders), "catalog_revision": hashlib.sha256(revision_input.encode()).hexdigest(), "message": message}
 
     @synchronized
     def workspace_snapshot(self) -> dict[str, Any]:
         """Capture an approved, metadata-only catalog revision in the audit trail."""
         status = self.workspace_status()
-        return {"available": status["available"], "configured": status["configured"], "document_count": status["count"], "catalog_revision": status["catalog_revision"], "message": "Metadata-only workspace snapshot captured in the approved plan evidence."}
+        return {"available": status["available"], "configured": status["configured"], "document_count": status["count"], "folder_count": status.get("folder_count", 0), "catalog_revision": status["catalog_revision"], "message": "Metadata-only workspace snapshot captured in the approved plan evidence."}
 
     @synchronized
+    def quality_tool_availability(self) -> dict[str, Any]:
+        """Read-only header probe: report whether fixed local quality gates are configured, without running them."""
+        compile_script = self.project_root / "scripts" / "compile_source.py"
+        validate_script = self.project_root / "scripts" / "validate_companyos.py"
+        tests_dir = self.project_root / "tests"
+        if not compile_script.is_file() or not validate_script.is_file() or not tests_dir.is_dir():
+            return {"available": False, "ok": False, "reason": "Local quality gate scripts are not configured"}
+        return {"available": True, "ok": True, "configured": True, "message": "Local quality gates are configured"}
+
     def quality_status(self) -> dict[str, Any]:
         """Run only the repository's fixed local CI gates; no shell interpolation."""
+        availability = self.quality_tool_availability()
+        if not availability.get("available"):
+            return {"available": False, "ok": False, "reason": availability.get("reason") or "Local quality checks are unavailable.", "checks": []}
         checks = [
             ("compile", [sys.executable, "scripts/compile_source.py", "--root", "src"]),
             ("tests", [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]),
@@ -538,6 +639,8 @@ class OperationsService:
         """Export the bounded local journal without exposing raw audit payloads."""
         entries = self.journal(limit)
         lines = ["# dopOS Journal", "", "A local human-readable projection of the append-only audit ledger."]
+        if not entries:
+            lines += ["", "No journal entries have been recorded yet."]
         for entry in entries:
             lines += ["", f"- **{entry['created_at']}** — {entry['summary']}"]
             if entry["detail"]:
@@ -582,6 +685,18 @@ class OperationsService:
         files = sorted(self.backup_directory.glob("dopos-*.db"), key=lambda path: path.stat().st_mtime, reverse=True)
         return [{"name": path.name, "size": path.stat().st_size, "modified_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()} for path in files[:max(1, min(limit, 100))]]
 
+    @synchronized
+    def backups_status(self, limit: int = 20) -> dict[str, Any]:
+        """HTTP-facing backup projection with explicit unset retention metadata."""
+        backups = self.backup_inventory(limit=limit)
+        return {
+            "available": True,
+            "count": len(backups),
+            "backups": backups,
+            "retention": self.backup_retention_status(),
+            "message": "Local backup inventory is read-only; retention remains unset.",
+        }
+
     @staticmethod
     def _backup_audit_chain(connection: sqlite3.Connection) -> bool:
         previous = "GENESIS"
@@ -597,10 +712,20 @@ class OperationsService:
             return False
 
     @synchronized
+    def backup_retention_status(self) -> dict[str, Any]:
+        """Report that local retention remains unset; never prune or delete backups."""
+        return {
+            "configured": False,
+            "policy": None,
+            "prune_enabled": False,
+            "message": "Backup retention is not implemented yet; existing local backups are left untouched.",
+        }
+
+    @synchronized
     def verify_backups(self, limit: int = 20) -> dict[str, Any]:
         """Read each local backup without modifying it and prove it is structurally usable."""
         if not self.backup_directory.is_dir():
-            return {"available": True, "ok": True, "backups": [], "message": "No local backups have been created yet."}
+            return {"available": True, "ok": True, "backups": [], "retention": self.backup_retention_status(), "message": "No local backups have been created yet."}
         files = sorted(self.backup_directory.glob("dopos-*.db"), key=lambda path: path.stat().st_mtime, reverse=True)[:max(1, min(limit, 100))]
         checks = []
         for path in files:
@@ -614,4 +739,4 @@ class OperationsService:
                 checks.append({"name": path.name, "integrity_ok": integrity_ok, "audit_chain_valid": audit_chain_valid, "ok": integrity_ok and audit_chain_valid})
             except (OSError, sqlite3.DatabaseError) as exc:
                 checks.append({"name": path.name, "integrity_ok": False, "audit_chain_valid": False, "ok": False, "error": self.display_text(str(exc), 300)})
-        return {"available": True, "ok": all(check["ok"] for check in checks), "backups": checks, "message": "No local backups have been created yet." if not checks else "Backup integrity checks completed locally."}
+        return {"available": True, "ok": all(check["ok"] for check in checks), "backups": checks, "retention": self.backup_retention_status(), "message": "No local backups have been created yet." if not checks else "Backup integrity checks completed locally."}

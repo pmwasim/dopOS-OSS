@@ -44,7 +44,7 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 return self.reply(400, {"error": str(exc)})
         if self.path == "/controls/kill-switch": return self.reply(200, self.service.control_status())
-        if self.path == "/backups": return self.reply(200, self.service.backup_inventory())
+        if self.path == "/backups": return self.reply(200, self.service.backups_status())
         if self.path == "/work-items": return self.reply(200, self.service.work_items())
         if self.path.startswith("/work-items/"):
             try: return self.reply(200, self.service.work_item(int(self.path.split("/")[2])))
