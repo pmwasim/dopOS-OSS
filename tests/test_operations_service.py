@@ -549,6 +549,14 @@ class OperationsServiceTests(unittest.TestCase):
         service.close()
 
 
+
+    def test_workspace_snapshot_includes_listing_limit(self):
+        service = OperationsService()
+        snap = service.workspace_snapshot()
+        self.assertEqual(snap["listing_limit"], 100)
+        service.close()
+
+
     def test_workspace_supported_extensions_constant(self):
         from dopos_core.service import WORKSPACE_SUPPORTED_EXTENSIONS
         self.assertEqual(WORKSPACE_SUPPORTED_EXTENSIONS, (".md", ".txt", ".pdf", ".docx", ".xlsx", ".pptx", ".ods", ".odt", ".odp"))
