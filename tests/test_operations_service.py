@@ -745,6 +745,12 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_quality_status_short_circuit_guard_unique(self):
+        from pathlib import Path
+        text = (Path(__file__).resolve().parents[1] / "src" / "dopos_core" / "service.py").read_text(encoding="utf-8")
+        self.assertEqual(text.count('if not availability.get("available"):'), 1)
+
     def test_quality_status_short_circuits_when_scripts_missing(self):
         service=OperationsService()
         with patch.object(service, "quality_tool_availability", return_value={"available": False, "ok": False, "reason": "Local quality gate scripts are not configured"}):
