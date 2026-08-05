@@ -180,6 +180,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("audit verified", page)
         self.assertIn("needs review", page)
         self.assertIn("retention on", page)
+        self.assertEqual(page.count("retention on"), 1)
         self.assertIn("new work can be planned", page)
         self.assertEqual(page.count("new work can be planned"), 1)
         self.assertIn("execution ready", page)
