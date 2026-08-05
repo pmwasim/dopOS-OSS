@@ -753,6 +753,14 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_request_router_adds_quality_for_local_quality_phrase(self):
+        service=OperationsService()
+        item=service.create_work_item("Local quality", "Show local quality status only")
+        with patch.object(service, "local_plan_explanation", return_value="Safe quality plan"):
+            plan=service.plan_for_request(item["id"])
+        self.assertIn("quality.status", plan["actions"]); service.close()
+
     def test_request_router_adds_quality_for_quality_gates_phrase(self):
         service=OperationsService()
         item=service.create_work_item("Gates", "Run the quality gates and compile source")
