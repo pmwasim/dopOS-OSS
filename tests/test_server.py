@@ -102,6 +102,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('prune ·', page)
         self.assertIn('The approved run and its evidence have been recorded.', page)
         self.assertIn("Workspace is ready and empty.", page)
+        self.assertEqual(page.count('Workspace is ready and empty.'), 1)
         self.assertIn("Local workspace directory has not been created yet.", page)
         self.assertIn("api('/today')", page)
         self.assertIn("Stop control enabled", page)
