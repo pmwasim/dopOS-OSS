@@ -122,6 +122,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Plan rejected", page)
         self.assertEqual(page.count('Plan rejected'), 1)
         self.assertIn('Preparing the smallest safe plan…', page)
+        self.assertEqual(page.count('Preparing the smallest safe plan…'), 1)
         self.assertIn('Ready to execute plan', page)
         self.assertIn('Saved plan', page)
         self.assertIn('Approve</button>', page)
