@@ -5,6 +5,10 @@ The runner is deliberately local-first: it can select queued work, run the
 repository's declared quality gates, and preserve failure evidence.  It does
 not guess deployment commands, mutate infrastructure, commit, push, or publish
 unless a repository owner explicitly enables and configures that capability.
+
+Queued work is only cleared when `--complete-work-item` is passed and the
+cycle passed, and the item is copied into that cycle's evidence before its
+inbox copy is removed.
 """
 from __future__ import annotations
 
@@ -93,6 +97,23 @@ def select_work_item(repo: Path, explicit: str | None) -> dict[str, str] | None:
     return {"path": str(item.relative_to(repo)), "title": item.stem.replace("-", " ")}
 
 
+def complete_work_item(repo: Path, work_item: dict[str, str], output: Path) -> str:
+    """Archive a finished work item into its cycle evidence and clear the queue.
+
+    Selection alone never advanced the queue, so a finished item stayed the
+    oldest candidate and was chosen again on every later cycle while completed
+    items accumulated. Archiving is opt-in and only ever happens after a passed
+    cycle, so evidence is preserved before the inbox copy is removed.
+    """
+    source = repo / work_item["path"]
+    try:
+        (output / "work-item.md").write_text(source.read_text(encoding="utf-8", errors="replace"), encoding="utf-8")
+        source.unlink()
+    except OSError as exc:
+        return f"retained: {exc}"
+    return "completed"
+
+
 def phase_result(name: str, commands: list[list[str]], repo: Path) -> dict[str, Any]:
     entries = [run(command, repo) for command in commands]
     return {
@@ -107,6 +128,7 @@ def markdown_report(report: dict[str, Any]) -> str:
     if report.get("work_item"):
         item = report["work_item"]
         lines += ["", "## Work item", f"- {item['title']} (`{item['path']}`)"]
+        lines += [f"- Disposition: {report.get('work_item_disposition', 'retained')}"]
     lines += ["", "## Phases"]
     lines += [f"- {phase['name']}: {phase['result']}" for phase in report["phases"]]
     if report["result"] == "failed":
@@ -139,6 +161,7 @@ def main() -> int:
     parser.add_argument("--phases", nargs="*", default=DEFAULT)
     parser.add_argument("--release", action="store_true", help="Run configured release commands only when explicitly enabled.")
     parser.add_argument("--dry-run", action="store_true", help="Validate the selected workflow without running commands.")
+    parser.add_argument("--complete-work-item", action="store_true", help="Archive the selected work item into the cycle evidence and clear it from the inbox when the cycle passes.")
     args = parser.parse_args()
     repo = args.repo.resolve()
     try:
@@ -188,6 +211,9 @@ def main() -> int:
             report["release"] = release_result["result"]
             if release_result["result"] == "failed":
                 report["result"] = "failed"
+    report["work_item_disposition"] = "none-selected" if not work_item else "retained"
+    if work_item and args.complete_work_item and not args.dry_run and report["result"] == "passed":
+        report["work_item_disposition"] = complete_work_item(repo, work_item, output)
     report["completed_at"] = utc_now()
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     (output / "journal.md").write_text(markdown_report(report), encoding="utf-8")
