@@ -231,6 +231,15 @@ class OperationsServiceTests(unittest.TestCase):
             plan=service.plan_for_request(item["id"])
         self.assertIn("workspace.status", plan["actions"]); service.close()
 
+
+    def test_request_router_adds_workspace_for_catalog_size_phrase(self):
+        service=OperationsService()
+        item=service.create_work_item("Size", "Show catalog size and total bytes for the workspace")
+        with patch.object(service, "local_plan_explanation", return_value="Safe workspace plan"):
+            plan=service.plan_for_request(item["id"])
+        self.assertIn("workspace.status", plan["actions"]); service.close()
+
+
     def test_request_router_adds_workspace_snapshot(self):
         service=OperationsService()
         item=service.create_work_item("Snapshot route", "Capture workspace snapshot catalog revision")
