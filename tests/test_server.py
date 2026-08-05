@@ -286,6 +286,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(workspace["extension_counts"], {})
         self.assertIn(".md", workspace["supported_extensions"])
         self.assertIn("supported_extensions", page)
+        self.assertIn("result.supported_extensions.map(escape)", page)
         self.assertTrue(workspace["configured"])
         self.assertIn("documents", workspace)
         self.assertIn("folders", workspace)

@@ -484,6 +484,14 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_workspace_snapshot_includes_supported_extensions(self):
+        from dopos_core.service import WORKSPACE_SUPPORTED_EXTENSIONS
+        service=OperationsService()
+        snap=service.workspace_snapshot()
+        self.assertEqual(snap["supported_extensions"], list(WORKSPACE_SUPPORTED_EXTENSIONS))
+        service.close()
+
     def test_workspace_supported_extensions_constant(self):
         from dopos_core.service import WORKSPACE_SUPPORTED_EXTENSIONS
         self.assertEqual(WORKSPACE_SUPPORTED_EXTENSIONS, (".md", ".txt", ".pdf", ".docx", ".xlsx", ".pptx", ".ods", ".odt", ".odp"))

@@ -498,7 +498,7 @@ class OperationsService:
     def workspace_snapshot(self) -> dict[str, Any]:
         """Capture an approved, metadata-only catalog revision in the audit trail."""
         status = self.workspace_status()
-        return {"available": status["available"], "configured": status["configured"], "document_count": status["count"], "folder_count": status.get("folder_count", 0), "extension_counts": status.get("extension_counts") or {}, "catalog_revision": status["catalog_revision"], "message": "Metadata-only workspace snapshot captured in the approved plan evidence."}
+        return {"available": status["available"], "configured": status["configured"], "document_count": status["count"], "folder_count": status.get("folder_count", 0), "extension_counts": status.get("extension_counts") or {}, "supported_extensions": status.get("supported_extensions") or list(WORKSPACE_SUPPORTED_EXTENSIONS), "catalog_revision": status["catalog_revision"], "message": "Metadata-only workspace snapshot captured in the approved plan evidence."}
 
     @synchronized
     def quality_tool_availability(self) -> dict[str, Any]:
