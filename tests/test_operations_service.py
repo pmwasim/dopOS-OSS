@@ -697,6 +697,14 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_quality_tool_availability_ok_true_in_success(self):
+        service=OperationsService()
+        result=service.quality_tool_availability()
+        self.assertTrue(result["ok"])
+        self.assertTrue(result["available"])
+        service.close()
+
     def test_quality_tool_availability_available_true_literal(self):
         from pathlib import Path
         text = (Path(__file__).resolve().parents[1] / "src" / "dopos_core" / "service.py").read_text(encoding="utf-8")
