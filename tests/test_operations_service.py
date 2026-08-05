@@ -645,6 +645,14 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertIn("backup.verify", plan["actions"])
             service.close()
 
+
+    def test_request_router_adds_backup_verify_for_inventory_phrase(self):
+        service=OperationsService()
+        item=service.create_work_item("Inventory", "Show the backup inventory and list backups")
+        with patch.object(service, "local_plan_explanation", return_value="Safe recovery plan"):
+            plan=service.plan_for_request(item["id"])
+        self.assertIn("backup.verify", plan["actions"]); service.close()
+
     def test_backup_retention_status_is_explicitly_unset(self):
         service=OperationsService()
         status=service.backup_retention_status()
