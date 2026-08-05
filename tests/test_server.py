@@ -167,6 +167,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("state.workspace", page)
         self.assertIn("state.safety", page)
         self.assertIn("Nothing waiting", page)
+        self.assertEqual(page.count("Nothing waiting"), 1)
         self.assertIn("retention unset", page)
         self.assertIn("audit verified", page)
         self.assertIn("needs review", page)
