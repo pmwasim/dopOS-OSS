@@ -107,6 +107,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("api('/today')", page)
         self.assertIn("Stop control enabled", page)
         self.assertIn("Safety ready", page)
+        self.assertIn("Execution paused — Resume", page)
+        self.assertEqual(page.count("Execution paused — Resume"), 1)
         self.assertEqual(page.count("Safety ready"), 1)
         self.assertIn("Plan rejected", page)
         self.assertIn('Preparing the smallest safe plan…', page)
