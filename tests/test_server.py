@@ -161,6 +161,7 @@ class ServerTests(unittest.TestCase):
         self.assertGreaterEqual(page.count("loadToday()"), 3)
         self.assertIn("state.queue", page)
         self.assertIn("no queued work", page)
+        self.assertEqual(page.count("no queued work"), 1)
         self.assertIn("inbox not configured", page)
         self.assertEqual(page.count("inbox not configured"), 1)
         self.assertIn("state.automation", page)
