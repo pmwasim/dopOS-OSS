@@ -1131,4 +1131,118 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertNotEqual(first.workspace_status()["catalog_revision"], second.workspace_status()["catalog_revision"])
             first.close(); second.close()
 
+class PlanWorkflowTests(unittest.TestCase):
+    """Ordered steps with dependencies, frozen at approval like any plan."""
+
+    def test_legacy_action_names_still_produce_a_single_completed_step_each(self):
+        service=OperationsService(); item=service.create_work_item("Legacy", "Show status")
+        plan=service.propose_plan(item["id"], ["status.summary", "diary.preview"])
+        self.assertEqual(plan["actions"], ["status.summary", "diary.preview"])
+        self.assertEqual([step["requires"] for step in plan["steps"]], [[], []])
+        service.approve_plan(plan["id"]); done=service.execute_plan(plan["id"])
+        self.assertTrue(all(entry["status"] == "completed" for entry in done["results"]))
+        service.close()
+
+    def test_dependent_step_runs_when_its_requirement_succeeds(self):
+        service=OperationsService(); item=service.create_work_item("Chain", "Check repo then ci")
+        plan=service.propose_plan(item["id"], ["github.status", {"action": "ci.status", "requires": ["github.status"]}])
+        service.approve_plan(plan["id"])
+        with patch("dopos_core.service.shutil.which", return_value="gh"), patch("dopos_core.service.subprocess.run") as run:
+            run.return_value=type("Result", (), {"returncode":0,"stdout":"[]","stderr":""})()
+            done=service.execute_plan(plan["id"])
+        self.assertEqual([entry["status"] for entry in done["results"]], ["completed", "completed"])
+        service.close()
+
+    def test_dependent_step_is_skipped_when_its_requirement_is_unavailable(self):
+        service=OperationsService(); item=service.create_work_item("Chain", "Check repo then ci")
+        plan=service.propose_plan(item["id"], ["github.status", {"action": "ci.status", "requires": ["github.status"]}])
+        service.approve_plan(plan["id"])
+        with patch("dopos_core.service.shutil.which", return_value=None):
+            done=service.execute_plan(plan["id"])
+        repository, ci = done["results"]
+        self.assertEqual(repository["status"], "completed"); self.assertFalse(repository["result"]["available"])
+        # The skipped step must record why, and must not invent a result.
+        self.assertEqual(ci["status"], "skipped"); self.assertIsNone(ci["result"]); self.assertEqual(ci["skipped_because"], ["github.status"])
+        service.close()
+
+    def test_skip_cascades_through_a_chain(self):
+        service=OperationsService(); item=service.create_work_item("Chain", "Three deep")
+        plan=service.propose_plan(item["id"], ["docker.status", {"action": "github.status", "requires": ["docker.status"]}, {"action": "ci.status", "requires": ["github.status"]}])
+        service.approve_plan(plan["id"])
+        with patch("dopos_core.service.shutil.which", return_value=None):
+            done=service.execute_plan(plan["id"])
+        self.assertEqual([entry["status"] for entry in done["results"]], ["completed", "skipped", "skipped"])
+        service.close()
+
+    def test_independent_steps_still_run_after_a_skip(self):
+        service=OperationsService(); item=service.create_work_item("Mixed", "Some independent work")
+        plan=service.propose_plan(item["id"], ["docker.status", {"action": "ci.status", "requires": ["docker.status"]}, "status.summary"])
+        service.approve_plan(plan["id"])
+        with patch("dopos_core.service.shutil.which", return_value=None):
+            done=service.execute_plan(plan["id"])
+        self.assertEqual([entry["status"] for entry in done["results"]], ["completed", "skipped", "completed"])
+        self.assertIn("work_items", done["results"][2]["result"])
+        service.close()
+
+    def test_workflow_cannot_widen_the_allowlist(self):
+        service=OperationsService(); item=service.create_work_item("Unsafe", "Try to escape")
+        for actions in ([{"action": "shell.run"}], [{"action": "status.summary"}, {"action": "rm"}], ["status.summary", {"action": None}]):
+            with self.assertRaisesRegex(ValueError, "unsupported action"):
+                service.propose_plan(item["id"], actions)
+        service.close()
+
+    def test_requirements_may_only_name_earlier_steps(self):
+        service=OperationsService(); item=service.create_work_item("Cycle", "Try a forward reference")
+        with self.assertRaisesRegex(ValueError, "unknown or later step"):
+            service.propose_plan(item["id"], [{"action": "ci.status", "requires": ["github.status"]}, "github.status"])
+        with self.assertRaisesRegex(ValueError, "unknown or later step"):
+            service.propose_plan(item["id"], [{"action": "ci.status", "requires": ["ci.status"]}])
+        with self.assertRaisesRegex(ValueError, "unknown or later step"):
+            service.propose_plan(item["id"], [{"action": "ci.status", "requires": ["nope"]}])
+        service.close()
+
+    def test_duplicate_step_ids_and_oversized_plans_are_refused(self):
+        service=OperationsService(); item=service.create_work_item("Bad", "Malformed plans")
+        with self.assertRaisesRegex(ValueError, "duplicate plan step id"):
+            service.propose_plan(item["id"], ["status.summary", "status.summary"])
+        with self.assertRaisesRegex(ValueError, "at most 20 steps"):
+            service.propose_plan(item["id"], [{"action": "status.summary", "id": f"step-{n}"} for n in range(21)])
+        with self.assertRaisesRegex(ValueError, "at least one action"):
+            service.propose_plan(item["id"], [])
+        service.close()
+
+    def test_explicit_ids_allow_the_same_action_twice(self):
+        service=OperationsService(); item=service.create_work_item("Twice", "Same action, two steps")
+        plan=service.propose_plan(item["id"], [{"action": "status.summary", "id": "before"}, {"action": "status.summary", "id": "after", "requires": ["before"]}])
+        service.approve_plan(plan["id"]); done=service.execute_plan(plan["id"])
+        self.assertEqual([entry["id"] for entry in done["results"]], ["before", "after"])
+        service.close()
+
+    def test_step_success_is_read_from_the_frozen_result(self):
+        self.assertTrue(OperationsService.step_succeeded({"available": True, "ok": True}))
+        self.assertTrue(OperationsService.step_succeeded([1, 2]))
+        self.assertTrue(OperationsService.step_succeeded({"count": 0}))
+        self.assertFalse(OperationsService.step_succeeded({"available": False}))
+        self.assertFalse(OperationsService.step_succeeded({"available": True, "ok": False}))
+
+    def test_router_makes_ci_depend_on_repository_metadata(self):
+        self.assertEqual(
+            OperationsService.route_dependencies(["status.summary", "github.status", "ci.status"]),
+            ["status.summary", "github.status", {"action": "ci.status", "requires": ["github.status"]}],
+        )
+        # Without the repository check there is nothing to depend on.
+        self.assertEqual(OperationsService.route_dependencies(["ci.status"]), ["ci.status"])
+
+    def test_routed_ci_request_freezes_the_dependency_and_keeps_actions_flat(self):
+        service=OperationsService(); item=service.create_work_item("CI", "Show the github repository and ci workflow runs")
+        with patch("dopos_core.service.shutil.which", return_value=None):
+            plan=service.plan_for_request(item["id"])
+        self.assertEqual(plan["actions"], ["status.summary", "github.status", "ci.status", "diary.preview"])
+        self.assertEqual(next(step["requires"] for step in plan["steps"] if step["id"] == "ci.status"), ["github.status"])
+        stored=service.work_item(item["id"])["plan"]
+        self.assertEqual(stored["actions"], plan["actions"])
+        self.assertEqual(stored["steps"], plan["steps"])
+        service.close()
+
+
 import sqlite3

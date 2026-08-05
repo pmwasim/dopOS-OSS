@@ -50,6 +50,18 @@ Its local API exposes `GET /health` (including audit-chain, execution-safety, wo
 
 The core also verifies its chained audit events and supports an explicit local SQLite backup through `OperationsService.backup_to(...)`. An approved backup request creates a unique database copy in the configured local state directory and records its checksum and audit-chain result. An approved recovery-health request verifies each stored backup's SQLite integrity and audit chain without modifying it. `GET /backups` returns the local inventory plus an explicit unset retention projection. Restore and off-machine storage are not implemented yet; backup retention remains unset and never prunes. `GET /health` and Today recovery both report retention as unset and never prune backups. The local document workspace starts as an empty `workspace/documents` scaffold so inventory and search are configured without shipping document contents. Hidden scaffold paths (names starting with `.`) are omitted from inventory counts.
 
+## Multi-step workflows
+
+A plan is an ordered list of steps rather than a flat list of actions. A step may be a bare action name, or an object naming an `action`, an optional `id`, and `requires` — the ids of earlier steps that must have succeeded first:
+
+```json
+["github.status", {"action": "ci.status", "requires": ["github.status"]}]
+```
+
+A step whose requirement did not succeed is recorded as `skipped` with the reason, and nothing is run for it; independent later steps still run. Success is read from the frozen result — a step counts as failed when its own result reports `available: false` or `ok: false` — so the same evidence always produces the same continuation.
+
+Requirements may only name earlier steps, so a workflow is acyclic by construction. Every action is still checked against the allowlist when the plan is proposed, a workflow can never widen what a plan may do, and the whole graph is frozen at approval. The deterministic router applies one fixed dependency of its own: a CI check requires the repository check, because both come from the same GitHub CLI. Plans written as a plain list of action names behave exactly as before.
+
 `OperationsService` accepts its backup, workspace, loop-evidence, and inbox directories as optional keyword arguments. An explicit argument wins, then the matching `DOPOS_*_DIR` environment variable, then the repository default, so existing single-instance deployments are unaffected. Passing directories explicitly lets one process hold several independent services without them sharing state through a single process-wide variable.
 
 ## Autonomous engineering loop

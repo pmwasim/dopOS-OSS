@@ -21,6 +21,7 @@ MAX_WORK_ITEM_REQUEST = 8_000
 MAX_WORKSPACE_QUERY = 160
 MAX_LOOP_REPORT_BYTES = 256_000
 MAX_WORK_ITEM_HEADER_BYTES = 4_096
+MAX_PLAN_STEPS = 20
 WORKSPACE_SUPPORTED_EXTENSIONS = (".md", ".txt", ".pdf", ".docx", ".xlsx", ".pptx", ".ods", ".odt", ".odp")
 
 def synchronized(method):
@@ -124,8 +125,9 @@ class OperationsService:
             # The newest plan is the source of truth for legacy rows created
             # before work-item lifecycle state was introduced.
             item["state"] = row["plan_state"]
+            steps = self.normalize_steps(json.loads(row["actions_json"]))
             item["plan"] = {
-                "id": row["plan_id"], "actions": json.loads(row["actions_json"]),
+                "id": row["plan_id"], "actions": [step["action"] for step in steps], "steps": steps,
                 "state": row["plan_state"], "created_at": row["plan_created_at"],
                 "approved_at": row["approved_at"],
                 "explanation": self.display_text(row["explanation"]),
@@ -169,13 +171,68 @@ class OperationsService:
                 return item
         raise ValueError("work item not found")
 
+    @classmethod
+    def normalize_steps(cls, actions: Any) -> list[dict[str, Any]]:
+        """Freeze a plan as ordered steps, accepting the legacy list of action names.
+
+        A step may declare `requires`, naming only ids of earlier steps, so the
+        dependency graph is acyclic by construction and needs no traversal to
+        validate. Every action is still checked against the allowlist here, so
+        a workflow can never widen what a plan is permitted to do.
+        """
+        if not isinstance(actions, list) or not actions:
+            raise ValueError("plan requires at least one action")
+        if len(actions) > MAX_PLAN_STEPS:
+            raise ValueError(f"plan must contain at most {MAX_PLAN_STEPS} steps")
+        steps: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for entry in actions:
+            if isinstance(entry, str):
+                entry = {"action": entry}
+            if not isinstance(entry, dict):
+                raise ValueError("plan step must be an action name or an object")
+            action = entry.get("action")
+            if action not in SAFE_ACTIONS:
+                raise ValueError("plan contains unsupported action")
+            identifier = entry.get("id") or action
+            if not isinstance(identifier, str) or not identifier.strip():
+                raise ValueError("plan step id must be text")
+            identifier = identifier.strip()
+            if identifier in seen:
+                raise ValueError(f"duplicate plan step id: {identifier}")
+            requires = entry.get("requires") or []
+            if isinstance(requires, str):
+                requires = [requires]
+            if not isinstance(requires, list):
+                raise ValueError("plan step requires must be a list of earlier step ids")
+            for needed in requires:
+                if not isinstance(needed, str) or needed not in seen:
+                    raise ValueError(f"plan step {identifier} requires an unknown or later step: {needed}")
+            seen.add(identifier)
+            steps.append({"id": identifier, "action": action, "requires": list(requires)})
+        return steps
+
+    @staticmethod
+    def step_succeeded(result: Any) -> bool:
+        """A step succeeds unless its own result reports unavailability or failure.
+
+        Conditions are read from the frozen result, never from a model, so the
+        same evidence always produces the same continuation.
+        """
+        if isinstance(result, dict):
+            if result.get("available") is False:
+                return False
+            if result.get("ok") is False:
+                return False
+        return True
+
     @synchronized
-    def propose_plan(self, work_item_id: int, actions: list[str], explanation: str = "") -> dict[str, Any]:
-        if not actions or any(action not in SAFE_ACTIONS for action in actions): raise ValueError("plan contains unsupported action")
+    def propose_plan(self, work_item_id: int, actions: list[Any], explanation: str = "") -> dict[str, Any]:
+        steps = self.normalize_steps(actions)
         if not self.db.execute("SELECT 1 FROM work_items WHERE id=?", (work_item_id,)).fetchone(): raise ValueError("work item not found")
-        now=self.now(); cursor=self.db.execute("INSERT INTO plans(work_item_id,actions_json,state,created_at,explanation) VALUES(?,?,?,?,?)", (work_item_id, json.dumps(actions), "awaiting_approval", now, explanation[:4000]))
+        now=self.now(); cursor=self.db.execute("INSERT INTO plans(work_item_id,actions_json,state,created_at,explanation) VALUES(?,?,?,?,?)", (work_item_id, json.dumps(steps), "awaiting_approval", now, explanation[:4000]))
         self.db.execute("UPDATE work_items SET state=? WHERE id=?", ("awaiting_approval", work_item_id)); self.db.commit()
-        plan={"id":cursor.lastrowid,"work_item_id":work_item_id,"actions":actions,"explanation":explanation[:4000],"state":"awaiting_approval","created_at":now}; self.audit("plan.proposed", plan); return plan
+        plan={"id":cursor.lastrowid,"work_item_id":work_item_id,"actions":[step["action"] for step in steps],"steps":steps,"explanation":explanation[:4000],"state":"awaiting_approval","created_at":now}; self.audit("plan.proposed", plan); return plan
 
     @synchronized
     def plan_for_request(self, work_item_id: int) -> dict[str, Any]:
@@ -211,9 +268,21 @@ class OperationsService:
             actions.append("backup.create")
         actions.append("diary.preview")
         explanation = self.local_plan_explanation(row["request"], actions)
-        plan=self.propose_plan(work_item_id, actions, explanation)
+        plan=self.propose_plan(work_item_id, self.route_dependencies(actions), explanation)
         self.audit("plan.routed", {"plan_id":plan["id"],"method":"deterministic-safe-router","actions":actions, "explanation_source":"local-qwen-or-fallback"})
         return plan
+
+    @staticmethod
+    def route_dependencies(actions: list[str]) -> list[Any]:
+        """Attach the fixed, deterministic dependencies between routed actions.
+
+        Both CI and repository metadata come from the same GitHub CLI, so a CI
+        check is pointless when the repository check already reported it
+        unavailable. The rule is a constant of the router, not a model choice.
+        """
+        if "ci.status" in actions and "github.status" in actions:
+            return [{"action": action, "requires": ["github.status"]} if action == "ci.status" else action for action in actions]
+        return list(actions)
 
     @synchronized
     def local_plan_explanation(self, request: str, actions: list[str]) -> str:
@@ -274,29 +343,47 @@ class OperationsService:
         if not row: raise ValueError("plan not found")
         if self.kill_switch_enabled(): raise ValueError("execution blocked by kill switch")
         if row["state"] != "approved": raise ValueError("plan requires approval")
-        actions=json.loads(row["actions_json"]); results=[]
-        for action in actions:
-            if action == "status.summary": results.append({"action": action, "result": self.status_summary()})
-            elif action == "diary.preview": results.append({"action": action, "result": self.diary_preview(limit=5)})
-            elif action == "docker.status": results.append({"action": action, "result": self.docker_status()})
-            elif action == "github.status": results.append({"action": action, "result": self.github_status()})
-            elif action == "ci.status": results.append({"action": action, "result": self.ci_status()})
-            elif action == "ollama.status": results.append({"action": action, "result": self.ollama_status()})
-            elif action == "quality.status": results.append({"action": action, "result": self.quality_status()})
-            elif action == "backup.create": results.append({"action": action, "result": self.create_backup()})
-            elif action == "backup.verify": results.append({"action": action, "result": self.verify_backups()})
-            elif action == "backup.retention": results.append({"action": action, "result": self.backup_retention_status()})
-            elif action == "workspace.status": results.append({"action": action, "result": self.workspace_status()})
-            elif action == "workspace.snapshot": results.append({"action": action, "result": self.workspace_snapshot()})
-            elif action == "loop.status": results.append({"action": action, "result": self.autonomous_loop_status()})
-            elif action == "queue.status": results.append({"action": action, "result": self.autonomous_work_queue()})
-            elif action == "health.status": results.append({"action": action, "result": self.health_status()})
-            elif action == "tools.status": results.append({"action": action, "result": self.tool_status()})
-            elif action == "control.status": results.append({"action": action, "result": self.control_status()})
-            else: raise ValueError("action is not safe")
+        steps=self.normalize_steps(json.loads(row["actions_json"])); results=[]; outcomes: dict[str, bool] = {}
+        for step in steps:
+            unmet=[needed for needed in step["requires"] if not outcomes.get(needed, False)]
+            if unmet:
+                # A dependent step is skipped, never silently run. The frozen
+                # plan is unchanged; only its recorded outcome differs.
+                outcomes[step["id"]]=False
+                results.append({"action": step["action"], "id": step["id"], "status": "skipped", "result": None, "skipped_because": unmet})
+                continue
+            result=self.run_action(step["action"])
+            outcomes[step["id"]]=self.step_succeeded(result)
+            results.append({"action": step["action"], "id": step["id"], "status": "completed", "result": result})
         self.db.execute("UPDATE plans SET state=? WHERE id=?", ("completed", plan_id))
         self.db.execute("UPDATE work_items SET state=? WHERE id=?", ("completed", row["work_item_id"])); self.db.commit()
         result={"id":plan_id,"state":"completed","results":results}; self.audit("plan.executed", result); return result
+
+    def run_action(self, action: str) -> Any:
+        """Dispatch one allowlisted action.
+
+        Deliberately an explicit chain rather than a lookup table or getattr:
+        the set of runnable actions must be readable in one place and must not
+        be reachable by name construction.
+        """
+        if action == "status.summary": return self.status_summary()
+        if action == "diary.preview": return self.diary_preview(limit=5)
+        if action == "docker.status": return self.docker_status()
+        if action == "github.status": return self.github_status()
+        if action == "ci.status": return self.ci_status()
+        if action == "ollama.status": return self.ollama_status()
+        if action == "quality.status": return self.quality_status()
+        if action == "backup.create": return self.create_backup()
+        if action == "backup.verify": return self.verify_backups()
+        if action == "backup.retention": return self.backup_retention_status()
+        if action == "workspace.status": return self.workspace_status()
+        if action == "workspace.snapshot": return self.workspace_snapshot()
+        if action == "loop.status": return self.autonomous_loop_status()
+        if action == "queue.status": return self.autonomous_work_queue()
+        if action == "health.status": return self.health_status()
+        if action == "tools.status": return self.tool_status()
+        if action == "control.status": return self.control_status()
+        raise ValueError("action is not safe")
 
     @synchronized
     def status_summary(self) -> dict[str, int]:
