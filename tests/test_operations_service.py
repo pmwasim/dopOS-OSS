@@ -318,6 +318,7 @@ class OperationsServiceTests(unittest.TestCase):
             ("Ledger health", "Check ledger health"),
             ("Audit chain", "Check audit chain validity"),
             ("Runtime ledger", "Inspect runtime ledger status"),
+            ("Health check", "Run a health check"),
         ):
             item = service.create_work_item(title, request)
             plan = service.plan_for_request(item["id"])
