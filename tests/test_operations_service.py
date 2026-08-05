@@ -746,6 +746,13 @@ class OperationsServiceTests(unittest.TestCase):
 
 
 
+
+    def test_quality_short_circuit_returns_empty_checks_literal(self):
+        from pathlib import Path
+        text = (Path(__file__).resolve().parents[1] / "src" / "dopos_core" / "service.py").read_text(encoding="utf-8")
+        self.assertIn('"checks": []', text)
+        self.assertEqual(text.count('"checks": []'), 1)
+
     def test_quality_status_short_circuit_guard_unique(self):
         from pathlib import Path
         text = (Path(__file__).resolve().parents[1] / "src" / "dopos_core" / "service.py").read_text(encoding="utf-8")
