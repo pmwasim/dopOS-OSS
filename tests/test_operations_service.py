@@ -462,6 +462,26 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(service.status_summary()["work_items"], 0)
         service.close()
 
+
+    def test_workspace_status_includes_extension_counts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            docs = root / "documents"
+            docs.mkdir()
+            (docs / "a.md").write_text("# a\n", encoding="utf-8")
+            (docs / "b.txt").write_text("b\n", encoding="utf-8")
+            (docs / "c.md").write_text("# c\n", encoding="utf-8")
+            import os
+            os.environ["DOPOS_WORKSPACE_DIR"] = str(docs)
+            try:
+                service = OperationsService()
+                status = service.workspace_status()
+            finally:
+                os.environ.pop("DOPOS_WORKSPACE_DIR", None)
+                service.close()
+            self.assertEqual(status["count"], 3)
+            self.assertEqual(status["extension_counts"], {".md": 2, ".txt": 1})
+
     def test_workspace_inventory_is_read_only_and_router_uses_allowlisted_action(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory); (root / "Projects").mkdir(); (root / "Projects" / "proposal.md").write_text("private draft")

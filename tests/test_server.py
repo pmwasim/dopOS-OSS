@@ -282,6 +282,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(set(tools), {"docker", "github", "ci", "ollama", "quality"})
         workspace = self.request("/workspace")
         self.assertEqual(workspace["count"], 0)
+        self.assertEqual(workspace["extension_counts"], {})
         self.assertTrue(workspace["configured"])
         self.assertIn("documents", workspace)
         self.assertIn("folders", workspace)
