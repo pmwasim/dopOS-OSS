@@ -114,6 +114,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Local workspace directory has not been created yet.", page)
         self.assertIn("api('/today')", page)
         self.assertIn("Stop control enabled", page)
+        self.assertEqual(page.count('Stop control enabled'), 1)
         self.assertIn("Safety ready", page)
         self.assertIn("Execution paused — Resume", page)
         self.assertEqual(page.count("Execution paused — Resume"), 1)
