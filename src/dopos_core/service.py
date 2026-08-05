@@ -177,7 +177,7 @@ class OperationsService:
             actions.append("ci.status")
         if "ollama" in request or "model" in request or "ai runtime" in request or "installed models" in request: actions.append("ollama.status")
         if any(word in request for word in ("test", "build", "validate", "quality", "lint", "compile", "unit test", "unit tests", "local checks", "quality gates", "compile source", "local ci", "local quality")): actions.append("quality.status")
-        if any(word in request for word in ("workspace", "document", "documents", "folder", "folders", "file", "files")):
+        if any(word in request for word in ("workspace", "document", "documents", "folder", "folders", "file", "files", "file type", "file types", "extension count", "extension counts", "document types")):
             actions.append("workspace.status")
         if any(word in request for word in ("workspace snapshot", "document snapshot", "workspace version", "document version", "catalog revision")):
             actions.append("workspace.snapshot")
@@ -365,6 +365,7 @@ class OperationsService:
                 "configured": workspace.get("configured", False),
                 "document_count": workspace.get("count", 0),
                 "folder_count": workspace.get("folder_count", 0),
+                "extension_counts": workspace.get("extension_counts") or {},
                 "catalog_revision": workspace.get("catalog_revision"),
             },
             "safety": {

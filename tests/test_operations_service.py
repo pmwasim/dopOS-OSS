@@ -63,6 +63,7 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertIn("quality", today)
             self.assertTrue(today["quality"].get("configured") or today["quality"].get("available"))
             self.assertIn("workspace", today)
+            self.assertIn("extension_counts", today["workspace"])
             self.assertTrue(today["workspace"]["configured"])
             self.assertEqual(today["workspace"]["document_count"], 0)
             self.assertEqual(today["workspace"]["folder_count"], 0)
@@ -210,6 +211,14 @@ class OperationsServiceTests(unittest.TestCase):
         plan=service.plan_for_request(item["id"])
         self.assertIn("ci.status", plan["actions"])
         service.close()
+
+
+    def test_request_router_adds_workspace_for_file_types_phrase(self):
+        service=OperationsService()
+        item=service.create_work_item("Types", "Show document types and extension counts")
+        with patch.object(service, "local_plan_explanation", return_value="Safe workspace plan"):
+            plan=service.plan_for_request(item["id"])
+        self.assertIn("workspace.status", plan["actions"]); service.close()
 
     def test_request_router_adds_workspace_snapshot(self):
         service=OperationsService()
