@@ -662,6 +662,16 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertFalse(captured["configured"])
         service.close()
 
+
+    def test_backups_status_message_is_unique(self):
+        from pathlib import Path
+        text = (Path(__file__).resolve().parents[1] / "src" / "dopos_core" / "service.py").read_text(encoding="utf-8")
+        self.assertEqual(text.count('Local backup inventory is read-only; retention remains unset.'), 1)
+        service=OperationsService()
+        status=service.backups_status()
+        self.assertEqual(status["message"], 'Local backup inventory is read-only; retention remains unset.')
+        service.close()
+
     def test_backups_status_includes_unset_retention_metadata(self):
         with tempfile.TemporaryDirectory() as directory:
             service=OperationsService(); service.backup_directory=Path(directory)
