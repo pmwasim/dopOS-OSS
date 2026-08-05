@@ -81,6 +81,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("tool-ci", page)
         self.assertIn("tool-quality", page)
         self.assertIn("Local quality gates are configured", page)
+        self.assertEqual(page.count("Local quality gates are configured"), 1)
         self.assertIn(">Quality</span>", page)
         self.assertIn("Available locally", page)
         self.assertEqual(page.count('Available locally'), 1)
