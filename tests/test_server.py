@@ -132,6 +132,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('id="workspace-query"', page)
         self.assertIn('Loading local state…', page)
         self.assertIn('Today is unavailable.', page)
+        self.assertEqual(page.count('Today is unavailable.'), 1)
         self.assertIn('No matching local documents.', page)
         self.assertIn('Searching local names…', page)
         self.assertIn('<strong>Goal</strong>', page)
