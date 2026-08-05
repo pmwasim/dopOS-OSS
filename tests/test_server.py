@@ -173,6 +173,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("needs review", page)
         self.assertIn("retention on", page)
         self.assertIn("new work can be planned", page)
+        self.assertEqual(page.count("new work can be planned"), 1)
         self.assertIn("execution ready", page)
         self.assertIn("execution paused", page)
         self.assertIn("kill switch", page)
