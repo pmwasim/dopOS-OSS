@@ -538,6 +538,19 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertEqual(len(WORKSPACE_SUPPORTED_EXTENSIONS), 9)
 
 
+
+    def test_workspace_status_sets_truncated_when_over_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for i in range(3):
+                (root / f"f{i}.md").write_text(f"# {i}\n", encoding="utf-8")
+            service = OperationsService(); service.workspace_directory = root
+            status = service.workspace_status(limit=2)
+            self.assertEqual(status["count"], 2)
+            self.assertTrue(status["truncated"])
+            self.assertIn("Document listing truncated", status["message"])
+            service.close()
+
     def test_workspace_status_ignores_hidden_scaffold_files(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
