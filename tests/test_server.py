@@ -119,6 +119,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(page.count("Execution paused — Resume"), 1)
         self.assertEqual(page.count("Safety ready"), 1)
         self.assertIn("Plan rejected", page)
+        self.assertEqual(page.count('Plan rejected'), 1)
         self.assertIn('Preparing the smallest safe plan…', page)
         self.assertIn('Ready to execute plan', page)
         self.assertIn('Saved plan', page)
