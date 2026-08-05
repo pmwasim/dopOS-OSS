@@ -483,6 +483,12 @@ class OperationsServiceTests(unittest.TestCase):
         service.close()
 
 
+
+    def test_workspace_supported_extensions_constant(self):
+        from dopos_core.service import WORKSPACE_SUPPORTED_EXTENSIONS
+        self.assertEqual(WORKSPACE_SUPPORTED_EXTENSIONS, (".md", ".txt", ".pdf", ".docx", ".xlsx", ".pptx", ".ods", ".odt", ".odp"))
+        self.assertEqual(len(WORKSPACE_SUPPORTED_EXTENSIONS), 9)
+
     def test_workspace_status_includes_extension_counts(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
