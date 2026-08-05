@@ -1093,4 +1093,42 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertIn("Docker", plan["explanation"]); self.assertNotIn("\u001b", plan["explanation"])
         self.assertIn("--hidethinking", run.call_args.args[0]); service.close()
 
+    def test_explicit_directories_override_process_environment(self):
+        import os
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp); explicit=root/"explicit"; from_environment=root/"environment"
+            for variable in ("DOPOS_BACKUP_DIR", "DOPOS_WORKSPACE_DIR", "DOPOS_LOOP_EVIDENCE_DIR", "DOPOS_INBOX_DIR"):
+                os.environ[variable]=str(from_environment)
+            try:
+                service=OperationsService(backup_directory=explicit/"backups", workspace_directory=explicit/"documents", loop_directory=explicit/"loop", inbox_directory=explicit/"inbox")
+                self.assertEqual(service.backup_directory, explicit/"backups")
+                self.assertEqual(service.workspace_directory, explicit/"documents")
+                self.assertEqual(service.loop_directory, explicit/"loop")
+                self.assertEqual(service.inbox_directory, explicit/"inbox")
+                service.close()
+                # An unset argument must still fall back to the environment.
+                fallback=OperationsService(workspace_directory=explicit/"documents")
+                self.assertEqual(fallback.workspace_directory, explicit/"documents")
+                self.assertEqual(fallback.backup_directory, from_environment)
+                fallback.close()
+            finally:
+                for variable in ("DOPOS_BACKUP_DIR", "DOPOS_WORKSPACE_DIR", "DOPOS_LOOP_EVIDENCE_DIR", "DOPOS_INBOX_DIR"):
+                    os.environ.pop(variable, None)
+
+    def test_two_services_in_one_process_keep_separate_directories(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp); first_documents=root/"first"/"documents"; second_documents=root/"second"/"documents"
+            first_documents.mkdir(parents=True); second_documents.mkdir(parents=True)
+            (first_documents/"first-only.md").write_text("first", encoding="utf-8")
+            (second_documents/"second-a.md").write_text("a", encoding="utf-8")
+            (second_documents/"second-b.md").write_text("b", encoding="utf-8")
+            first=OperationsService(workspace_directory=first_documents)
+            second=OperationsService(workspace_directory=second_documents)
+            # Neither inventory may observe the other's documents.
+            self.assertEqual(first.workspace_status()["count"], 1)
+            self.assertEqual(second.workspace_status()["count"], 2)
+            self.assertEqual([entry["path"] for entry in first.workspace_status()["documents"]], ["first-only.md"])
+            self.assertNotEqual(first.workspace_status()["catalog_revision"], second.workspace_status()["catalog_revision"])
+            first.close(); second.close()
+
 import sqlite3

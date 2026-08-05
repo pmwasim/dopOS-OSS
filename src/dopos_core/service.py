@@ -30,13 +30,13 @@ def synchronized(method):
     return wrapped
 
 class OperationsService:
-    def __init__(self, database: str | Path = ":memory:"):
+    def __init__(self, database: str | Path = ":memory:", *, backup_directory: str | Path | None = None, workspace_directory: str | Path | None = None, loop_directory: str | Path | None = None, inbox_directory: str | Path | None = None):
         self._lock = threading.RLock()
         self.project_root = Path(__file__).resolve().parents[2]
-        self.backup_directory = Path(os.environ.get("DOPOS_BACKUP_DIR", self.project_root / "workspace/generated/backups"))
-        self.workspace_directory = Path(os.environ.get("DOPOS_WORKSPACE_DIR", self.project_root / "workspace/documents"))
-        self.loop_directory = Path(os.environ.get("DOPOS_LOOP_EVIDENCE_DIR", self.project_root / "workspace/generated/autonomous-loop"))
-        self.inbox_directory = Path(os.environ.get("DOPOS_INBOX_DIR", self.project_root / "workspace/inbox"))
+        self.backup_directory = self._resolve_directory(backup_directory, "DOPOS_BACKUP_DIR", "workspace/generated/backups")
+        self.workspace_directory = self._resolve_directory(workspace_directory, "DOPOS_WORKSPACE_DIR", "workspace/documents")
+        self.loop_directory = self._resolve_directory(loop_directory, "DOPOS_LOOP_EVIDENCE_DIR", "workspace/generated/autonomous-loop")
+        self.inbox_directory = self._resolve_directory(inbox_directory, "DOPOS_INBOX_DIR", "workspace/inbox")
         self.db = sqlite3.connect(database, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript("""
@@ -52,6 +52,17 @@ class OperationsService:
             self.db.execute("ALTER TABLE plans ADD COLUMN explanation TEXT NOT NULL DEFAULT ''")
         if not self.db.execute("SELECT 1 FROM controls WHERE name='kill_switch'").fetchone():
             self.db.execute("INSERT INTO controls(name,value,updated_at) VALUES(?,?,?)", ("kill_switch", "off", self.now())); self.db.commit()
+
+    def _resolve_directory(self, explicit: str | Path | None, variable: str, default: str) -> Path:
+        """Explicit argument wins, then process environment, then repository default.
+
+        Passing directories explicitly lets one process hold several
+        independent services without them sharing state through the
+        environment, which a single process-wide variable cannot express.
+        """
+        if explicit is not None:
+            return Path(explicit)
+        return Path(os.environ.get(variable, self.project_root / default))
 
     @synchronized
     def close(self) -> None:
