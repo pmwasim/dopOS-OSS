@@ -86,6 +86,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("loadDiary()", page)
         self.assertIn("loadRecent", page)
         self.assertIn("No work yet.", page)
+        self.assertEqual(page.count('No work yet.'), 1)
         self.assertIn("folder</small>", page)
         self.assertEqual(page.count("folder</small>"), 1)
         self.assertIn(' bytes</small>', page)
