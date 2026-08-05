@@ -213,6 +213,14 @@ class OperationsServiceTests(unittest.TestCase):
         service.close()
 
 
+
+    def test_request_router_adds_workspace_for_supported_extensions_phrase(self):
+        service=OperationsService()
+        item=service.create_work_item("Allowed", "List supported extensions and allowed document types")
+        with patch.object(service, "local_plan_explanation", return_value="Safe workspace plan"):
+            plan=service.plan_for_request(item["id"])
+        self.assertIn("workspace.status", plan["actions"]); service.close()
+
     def test_request_router_adds_workspace_for_file_types_phrase(self):
         service=OperationsService()
         item=service.create_work_item("Types", "Show document types and extension counts")
