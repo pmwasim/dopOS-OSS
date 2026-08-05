@@ -183,6 +183,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("new work can be planned", page)
         self.assertEqual(page.count("new work can be planned"), 1)
         self.assertIn("execution ready", page)
+        self.assertIn("kill switch ${escape(safety.kill_switch || 'unknown')}", page)
         self.assertGreaterEqual(page.count("execution ready"), 1)
         self.assertIn("execution paused", page)
         self.assertIn("kill switch", page)
