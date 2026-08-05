@@ -80,6 +80,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('aria-label="Export Diary as Markdown"', page)
         self.assertIn("tool-ci", page)
         self.assertIn("tool-quality", page)
+        self.assertEqual(page.count("tool-quality"), 1)
         self.assertIn("Local quality gates are configured", page)
         self.assertEqual(page.count("Local quality gates are configured"), 1)
         self.assertIn(">Quality</span>", page)
