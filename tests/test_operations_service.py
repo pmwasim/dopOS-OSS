@@ -738,6 +738,18 @@ class OperationsServiceTests(unittest.TestCase):
         service.close()
 
 
+
+    def test_quality_status_short_circuits_when_scripts_missing(self):
+        service=OperationsService()
+        with patch.object(service, "quality_tool_availability", return_value={"available": False, "ok": False, "reason": "Local quality gate scripts are not configured"}):
+            with patch("dopos_core.service.subprocess.run") as run:
+                result=service.quality_status()
+        self.assertFalse(result["available"])
+        self.assertEqual(result["reason"], "Local quality gate scripts are not configured")
+        self.assertEqual(result["checks"], [])
+        run.assert_not_called()
+        service.close()
+
     def test_quality_status_timeout_message_is_explicit(self):
         from pathlib import Path
         source = Path(__file__).resolve().parents[1] / "src" / "dopos_core" / "service.py"
