@@ -494,6 +494,8 @@ class OperationsService:
         for document in documents:
             key = document["extension"] or "(none)"
             extension_counts[key] = extension_counts.get(key, 0) + 1
+        # Highest counts first, then extension name for stable catalog browsing.
+        extension_counts = dict(sorted(extension_counts.items(), key=lambda item: (-item[1], item[0])))
         return {"available": True, "configured": True, "query": query, "documents": documents, "folders": folders, "count": len(documents), "folder_count": len(folders), "extension_counts": extension_counts, "supported_extensions": list(WORKSPACE_SUPPORTED_EXTENSIONS), "catalog_revision": hashlib.sha256(revision_input.encode()).hexdigest(), "message": message}
 
     @synchronized

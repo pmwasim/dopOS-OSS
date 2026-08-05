@@ -518,6 +518,7 @@ class OperationsServiceTests(unittest.TestCase):
                 service.close()
             self.assertEqual(status["count"], 3)
             self.assertEqual(status["extension_counts"], {".md": 2, ".txt": 1})
+            self.assertEqual(list(status["extension_counts"]), [".md", ".txt"])
             self.assertIn(".md", status["supported_extensions"])
             self.assertIn(".pdf", status["supported_extensions"])
 
