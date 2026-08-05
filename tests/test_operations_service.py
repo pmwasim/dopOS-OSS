@@ -320,6 +320,7 @@ class OperationsServiceTests(unittest.TestCase):
             ("Runtime ledger", "Inspect runtime ledger status"),
             ("Health check", "Run a health check"),
             ("Probe runtime", "Probe runtime health now"),
+            ("Local health probe", "Run a local health probe"),
         ):
             item = service.create_work_item(title, request)
             plan = service.plan_for_request(item["id"])
