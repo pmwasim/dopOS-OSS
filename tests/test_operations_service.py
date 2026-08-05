@@ -315,6 +315,7 @@ class OperationsServiceTests(unittest.TestCase):
             ("Monitor health", "Monitor health for local runtime"),
             ("Local monitor", "Run a local monitor check"),
             ("Runtime probe", "Run a runtime probe"),
+            ("Ledger health", "Check ledger health"),
         ):
             item = service.create_work_item(title, request)
             plan = service.plan_for_request(item["id"])
