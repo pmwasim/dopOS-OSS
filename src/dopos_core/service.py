@@ -176,7 +176,7 @@ class OperationsService:
         if re.search(r"\bci\b", request) or any(phrase in request for phrase in ("github actions", "workflow", "pipeline")):
             actions.append("ci.status")
         if "ollama" in request or "model" in request or "ai runtime" in request or "installed models" in request: actions.append("ollama.status")
-        if any(word in request for word in ("test", "build", "validate", "quality", "lint", "compile", "unit test", "unit tests", "local checks")): actions.append("quality.status")
+        if any(word in request for word in ("test", "build", "validate", "quality", "lint", "compile", "unit test", "unit tests", "local checks", "quality gates", "compile source", "local ci")): actions.append("quality.status")
         if any(word in request for word in ("workspace", "document", "documents", "folder", "folders", "file", "files")):
             actions.append("workspace.status")
         if any(word in request for word in ("workspace snapshot", "document snapshot", "workspace version", "document version", "catalog revision")):
