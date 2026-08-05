@@ -162,6 +162,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("state.queue", page)
         self.assertIn("no queued work", page)
         self.assertIn("inbox not configured", page)
+        self.assertEqual(page.count("inbox not configured"), 1)
         self.assertIn("state.automation", page)
         self.assertIn("no cycle recorded yet", page)
         self.assertIn("loop evidence not configured", page)
