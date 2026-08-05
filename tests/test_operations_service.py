@@ -64,6 +64,8 @@ class OperationsServiceTests(unittest.TestCase):
             self.assertTrue(today["quality"].get("configured") or today["quality"].get("available"))
             self.assertIn("workspace", today)
             self.assertIn("extension_counts", today["workspace"])
+            self.assertIn("supported_extensions", today["workspace"])
+            self.assertIn(".md", today["workspace"]["supported_extensions"])
             self.assertTrue(today["workspace"]["configured"])
             self.assertEqual(today["workspace"]["document_count"], 0)
             self.assertEqual(today["workspace"]["folder_count"], 0)

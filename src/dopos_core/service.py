@@ -369,6 +369,7 @@ class OperationsService:
                 "document_count": workspace.get("count", 0),
                 "folder_count": workspace.get("folder_count", 0),
                 "extension_counts": workspace.get("extension_counts") or {},
+                "supported_extensions": workspace.get("supported_extensions") or list(WORKSPACE_SUPPORTED_EXTENSIONS),
                 "catalog_revision": workspace.get("catalog_revision"),
             },
             "safety": {
