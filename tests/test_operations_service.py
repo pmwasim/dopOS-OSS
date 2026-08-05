@@ -296,6 +296,7 @@ class OperationsServiceTests(unittest.TestCase):
         self.assertIn("catalog_revision", health["workspace"])
         self.assertIn("extension_counts", health["workspace"])
         self.assertEqual(health["workspace"]["extension_counts"], {})
+        self.assertIn(".md", health["workspace"]["supported_extensions"])
         self.assertEqual(health["backup_count"], 0)
         self.assertFalse(health["backup_retention"]["configured"])
         self.assertFalse(health["backup_retention"]["prune_enabled"])
