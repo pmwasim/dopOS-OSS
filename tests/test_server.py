@@ -87,6 +87,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("No work yet.", page)
         self.assertIn("folder</small>", page)
         self.assertIn(' bytes</small>', page)
+        self.assertEqual(page.count(' bytes</small>'), 1)
         self.assertIn('Host records', page)
         self.assertEqual(page.count('Host records'), 1)
         self.assertIn('Workspace inventory', page)
