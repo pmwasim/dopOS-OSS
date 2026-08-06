@@ -759,6 +759,9 @@ class OperationsService:
         elif kind == "database.backed_up":
             summary = "Created a verified local recovery backup."
             detail = "The append-only audit chain was checked before recording the backup."
+        elif kind == "database.restored":
+            summary = "Restored the local database from a verified backup."
+            detail = "The backup was checked for integrity and chain validity, and the replaced state was copied aside first."
         else:
             summary = cls.display_text(kind.replace("_", " ").replace(".", " · ").capitalize(), 180)
             detail = "Recorded in the immutable local audit ledger."
@@ -811,6 +814,63 @@ class OperationsService:
         stamp = self.now().replace(":", "").replace("+00:00", "Z")
         path = self.backup_directory / f"dopos-{stamp}-{uuid.uuid4().hex[:8]}.db"
         return self.backup_to(path)
+
+    @synchronized
+    def restore_from(self, source: str | Path) -> dict[str, Any]:
+        """Replace the live database with a verified local backup.
+
+        Deliberately **not** an allowlisted action: restore is the only
+        destructive operation in the core, so it cannot be reached through a
+        plan and must be invoked explicitly by an operator.
+
+        The order is what makes it safe. The source is proved readable, sound,
+        and chain-valid *before* anything is touched; then the current
+        database is copied aside so a restore that turns out to be unwanted is
+        itself recoverable; only then is the live database replaced. Any
+        failure before the final step leaves the running system untouched.
+        """
+        source = Path(source)
+        if not source.is_file() or source.is_symlink():
+            raise ValueError("backup source must be an existing regular file")
+        # sqlite3.connect is lazy, so an unusable file only reveals itself when
+        # the first statement runs; both stages are guarded together.
+        try:
+            checked = sqlite3.connect(f"file:{source}?mode=ro", uri=True)
+        except sqlite3.DatabaseError as exc:
+            raise ValueError(f"backup source is not a readable database: {exc}") from exc
+        try:
+            if checked.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                raise ValueError("backup source failed its integrity check")
+            if not self._backup_audit_chain(checked):
+                raise ValueError("backup source has a broken audit chain")
+        except sqlite3.DatabaseError as exc:
+            raise ValueError(f"backup source is not a readable database: {exc}") from exc
+        finally:
+            checked.close()
+        # The pre-restore copy is taken before the live database changes, so
+        # the state being replaced is never the only copy.
+        stamp = self.now().replace(":", "").replace("+00:00", "Z")
+        safety = self.backup_directory / f"dopos-pre-restore-{stamp}-{uuid.uuid4().hex[:8]}.db"
+        safety.parent.mkdir(parents=True, exist_ok=True)
+        replaced = sqlite3.connect(safety)
+        try:
+            self.db.backup(replaced)
+        finally:
+            replaced.close()
+        incoming = sqlite3.connect(f"file:{source}?mode=ro", uri=True)
+        try:
+            incoming.backup(self.db)
+        finally:
+            incoming.close()
+        result = {
+            "restored_from": str(source),
+            "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+            "replaced_backup": str(safety),
+            "audit_chain_valid": self.verify_audit_chain(),
+            "records": self.status_summary(),
+        }
+        self.audit("database.restored", result)
+        return result
 
     @synchronized
     def backup_inventory(self, limit: int = 20) -> list[dict[str, Any]]:

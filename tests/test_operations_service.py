@@ -1246,3 +1246,99 @@ class PlanWorkflowTests(unittest.TestCase):
 
 
 import sqlite3
+
+
+class RestoreTests(unittest.TestCase):
+    """Restore is the only destructive operation, so its guards are the test."""
+
+    def service(self, temp):
+        return OperationsService(str(Path(temp) / "live.db"), backup_directory=Path(temp) / "backups")
+
+    def test_restore_returns_the_database_to_a_captured_state(self):
+        with tempfile.TemporaryDirectory() as temp:
+            service = self.service(temp)
+            service.create_work_item("Before backup", "First state")
+            captured = service.create_backup()
+            service.create_work_item("After backup", "Second state")
+            self.assertEqual(service.status_summary()["work_items"], 2)
+
+            result = service.restore_from(captured["path"])
+            self.assertEqual(service.status_summary()["work_items"], 1)
+            self.assertEqual([i["title"] for i in service.work_items()], ["Before backup"])
+            self.assertTrue(result["audit_chain_valid"])
+            self.assertTrue(service.verify_audit_chain())
+            service.close()
+
+    def test_the_replaced_state_is_copied_aside_and_can_be_restored_back(self):
+        with tempfile.TemporaryDirectory() as temp:
+            service = self.service(temp)
+            service.create_work_item("Original", "First state")
+            captured = service.create_backup()
+            service.create_work_item("Later", "Second state")
+
+            result = service.restore_from(captured["path"])
+            replaced = Path(result["replaced_backup"])
+            self.assertTrue(replaced.is_file())
+            # The state that was replaced is itself recoverable.
+            service.restore_from(replaced)
+            self.assertEqual([i["title"] for i in service.work_items()], ["Later", "Original"])
+            service.close()
+
+    def test_an_unsound_source_is_refused_and_the_live_database_is_untouched(self):
+        with tempfile.TemporaryDirectory() as temp:
+            service = self.service(temp)
+            service.create_work_item("Keep me", "Live state")
+            before = service.status_summary()
+
+            junk = Path(temp) / "junk.db"
+            junk.write_bytes(b"this is not a database")
+            with self.assertRaises(ValueError):
+                service.restore_from(junk)
+
+            missing = Path(temp) / "absent.db"
+            with self.assertRaisesRegex(ValueError, "existing regular file"):
+                service.restore_from(missing)
+
+            self.assertEqual(service.status_summary(), before)
+            self.assertEqual([i["title"] for i in service.work_items()], ["Keep me"])
+            service.close()
+
+    def test_a_tampered_backup_chain_is_refused(self):
+        with tempfile.TemporaryDirectory() as temp:
+            service = self.service(temp)
+            service.create_work_item("Original", "State")
+            captured = Path(service.create_backup()["path"])
+            # Rewrite one payload so the recorded hash no longer matches.
+            tampered = sqlite3.connect(captured)
+            try:
+                tampered.execute("DROP TRIGGER IF EXISTS audit_events_no_update")
+                tampered.execute("UPDATE audit_events SET payload_json='{\"tampered\":true}' WHERE id=1")
+                tampered.commit()
+            finally:
+                tampered.close()
+            with self.assertRaisesRegex(ValueError, "broken audit chain"):
+                service.restore_from(captured)
+            self.assertEqual([i["title"] for i in service.work_items()], ["Original"])
+            service.close()
+
+    def test_restore_is_not_reachable_through_a_plan(self):
+        from dopos_core.service import SAFE_ACTIONS
+        self.assertNotIn("database.restore", SAFE_ACTIONS)
+        self.assertNotIn("backup.restore", SAFE_ACTIONS)
+        self.assertFalse([action for action in SAFE_ACTIONS if "restore" in action])
+        with tempfile.TemporaryDirectory() as temp:
+            service = self.service(temp)
+            item = service.create_work_item("Try restore", "restore the database from a backup")
+            plan = service.plan_for_request(item["id"])
+            self.assertFalse([a for a in plan["actions"] if "restore" in a])
+            service.close()
+
+    def test_restore_is_recorded_in_the_journal(self):
+        with tempfile.TemporaryDirectory() as temp:
+            service = self.service(temp)
+            service.create_work_item("Original", "State")
+            captured = service.create_backup()
+            service.restore_from(captured["path"])
+            summaries = [entry["summary"] for entry in service.journal()]
+            self.assertIn("Restored the local database from a verified backup.", summaries)
+            service.close()
